@@ -1,0 +1,6 @@
+{
+    "outputDirectory": "./Output",
+    "snapshotQuality": 95,
+    "csvDelimiter": ";",
+    "csvEncoding": "UTF8"
+}
