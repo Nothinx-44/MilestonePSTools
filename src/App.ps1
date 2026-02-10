@@ -26,6 +26,7 @@ if (Test-Path $configPath) {
 else {
     Write-Warning "Fichier config.json introuvable. Utilisation des valeurs par defaut."
     $configRaw = [PSCustomObject]@{
+        installMode     = 'Auto'
         outputDirectory = './Output'
         snapshotQuality = 95
         csvDelimiter    = ';'
@@ -39,12 +40,14 @@ if (-not [System.IO.Path]::IsPathRooted($outputDir)) {
     $outputDir = Join-Path $AppRoot $outputDir
 }
 
+$script:DependenciesPath = Join-Path $AppRoot 'Dependencies'
+
 $script:Config = @{
-    outputDirectory = $outputDir
-    snapshotQuality = [int]$configRaw.snapshotQuality
-    csvDelimiter    = $configRaw.csvDelimiter
-    csvEncoding     = $configRaw.csvEncoding
-    logDirectory    = Join-Path $AppRoot 'Logs'
+    outputDirectory  = $outputDir
+    snapshotQuality  = [int]$configRaw.snapshotQuality
+    csvDelimiter     = $configRaw.csvDelimiter
+    csvEncoding      = $configRaw.csvEncoding
+    logDirectory     = Join-Path $AppRoot 'Logs'
 }
 
 # ============================================================
@@ -67,8 +70,21 @@ $script:Config = @{
 # 3. INITIALISATION DES MODULES ET CONNEXION
 # ============================================================
 
+# Determiner le mode d'installation
+# Auto = utilise Dependencies/ si present, sinon Online
+$installMode = $configRaw.installMode
+if (-not $installMode -or $installMode -eq 'Auto') {
+    if (Test-Path $DependenciesPath) {
+        $installMode = 'Offline'
+        Write-Host 'Mode Offline detecte (dossier Dependencies/ present).' -ForegroundColor Yellow
+    }
+    else {
+        $installMode = 'Online'
+    }
+}
+
 $initLog = { param($Message) Write-Host $Message }
-Initialize-RequiredModules -Log $initLog
+Initialize-RequiredModules -InstallMode $installMode -DependenciesPath $DependenciesPath -Log $initLog
 
 Write-Host 'Connexion au serveur Milestone...' -ForegroundColor Cyan
 Connect-ManagementServer -ShowDialog -AcceptEula -Force

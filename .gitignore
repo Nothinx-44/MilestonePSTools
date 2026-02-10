@@ -1,0 +1,8 @@
+# Modules telecharges pour usage offline (genere par Save-Dependencies.ps1)
+Dependencies/
+
+# Fichiers de sortie generes par l'application
+Output/
+
+# Logs d'activite
+Logs/*.log

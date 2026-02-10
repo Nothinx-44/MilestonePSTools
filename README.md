@@ -18,9 +18,7 @@ Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShel
 - PowerShell 5.1+ (inclus dans Windows) ou PowerShell 7+
 - Acces reseau au serveur Milestone XProtect Management Server
 
-Les modules suivants sont installes automatiquement au premier lancement :
-- [MilestonePSTools](https://www.powershellgallery.com/packages/MilestonePSTools)
-- [ImportExcel](https://www.powershellgallery.com/packages/ImportExcel)
+Le module [MilestonePSTools](https://www.powershellgallery.com/packages/MilestonePSTools) est installe automatiquement au premier lancement (mode Online).
 
 ## Lancement
 
@@ -30,12 +28,45 @@ Les modules suivants sont installes automatiquement au premier lancement :
 
 Ou clic-droit sur `Launch.ps1` > **Executer avec PowerShell**.
 
+## Installation des dependances
+
+L'application supporte deux modes d'installation :
+
+### Mode Online (par defaut)
+
+Si la machine a acces a Internet, le module MilestonePSTools est telecharge et installe automatiquement depuis PowerShell Gallery au premier lancement. Aucune action requise.
+
+### Mode Offline (machine isolee)
+
+Pour deployer sur une machine sans acces Internet :
+
+1. Sur une machine **avec** Internet, executez :
+   ```powershell
+   .\Save-Dependencies.ps1
+   ```
+   Cela telecharge le module dans le dossier `Dependencies/`.
+
+2. Copiez le **projet entier** (avec `Dependencies/`) sur la machine cible.
+
+3. Lancez normalement — le mode Offline est detecte automatiquement grace a la presence du dossier `Dependencies/`.
+
+### Configuration du mode
+
+Dans `config.json`, le parametre `installMode` accepte :
+
+| Valeur | Comportement |
+|--------|-------------|
+| `Auto` | Utilise `Dependencies/` si present, sinon telecharge en ligne *(defaut)* |
+| `Online` | Force le telechargement depuis PSGallery |
+| `Offline` | Force le chargement local (erreur si module absent) |
+
 ## Configuration
 
 Modifier `config.json` pour personnaliser le comportement :
 
 ```json
 {
+    "installMode": "Auto",
     "outputDirectory": "./Output",
     "snapshotQuality": 95,
     "csvDelimiter": ";",
@@ -45,6 +76,7 @@ Modifier `config.json` pour personnaliser le comportement :
 
 | Parametre | Description | Defaut |
 |-----------|-------------|--------|
+| `installMode` | Mode d'installation des modules : `Auto`, `Online`, `Offline` | `Auto` |
 | `outputDirectory` | Repertoire de sortie (snapshots, CSV, etc.) | `./Output` |
 | `snapshotQuality` | Qualite JPEG des snapshots (1-100) | `95` |
 | `csvDelimiter` | Separateur pour l'export CSV | `;` |
@@ -55,7 +87,9 @@ Modifier `config.json` pour personnaliser le comportement :
 ```
 MilestonePSTools/
 ├── Launch.ps1                  # Point d'entree
+├── Save-Dependencies.ps1       # Telecharge les modules pour usage offline
 ├── config.json                 # Configuration utilisateur
+├── Dependencies/               # Modules offline (genere par Save-Dependencies.ps1)
 ├── src/
 │   ├── App.ps1                 # Bootstrap, chargement UI, wiring evenements
 │   ├── UI/
