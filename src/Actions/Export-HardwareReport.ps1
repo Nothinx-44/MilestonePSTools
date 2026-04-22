@@ -1,10 +1,6 @@
 <#
 .SYNOPSIS
     Exporte un rapport CSV de tous les equipements (hardware) du VMS Milestone.
-.PARAMETER Config
-    Hashtable de configuration (outputDirectory, csvDelimiter, csvEncoding).
-.PARAMETER Log
-    Scriptblock callback pour logger vers l'UI.
 #>
 
 function Export-HardwareReport {
@@ -16,6 +12,18 @@ function Export-HardwareReport {
         [Parameter(Mandatory)]
         [scriptblock]$Log
     )
+
+    # Avertissement : le rapport contient les mots de passe en clair
+    $confirm = [System.Windows.MessageBox]::Show(
+        "Ce rapport inclut les mots de passe des cameras en clair dans le fichier CSV.`n`nAssurez-vous de stocker le fichier dans un emplacement securise.`n`nContinuer ?",
+        'Avertissement — Donnees sensibles',
+        [System.Windows.MessageBoxButton]::YesNo,
+        [System.Windows.MessageBoxImage]::Warning
+    )
+    if ($confirm -ne [System.Windows.MessageBoxResult]::Yes) {
+        & $Log "Export annule par l'utilisateur."
+        return
+    }
 
     & $Log "Generation du rapport hardware..."
 

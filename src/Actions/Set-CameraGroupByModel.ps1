@@ -1,13 +1,6 @@
 <#
 .SYNOPSIS
     Cree des Device Groups dans Milestone organises par modele de camera.
-.DESCRIPTION
-    Cree un dossier parent "Modele" dans les Device Groups, puis un sous-dossier
-    par modele de camera, et y ajoute les cameras correspondantes.
-.PARAMETER Config
-    Hashtable de configuration.
-.PARAMETER Log
-    Scriptblock callback pour logger vers l'UI.
 #>
 
 function Set-CameraGroupByModel {
@@ -17,7 +10,13 @@ function Set-CameraGroupByModel {
         [hashtable]$Config,
 
         [Parameter(Mandatory)]
-        [scriptblock]$Log
+        [scriptblock]$Log,
+
+        [Parameter()]
+        [scriptblock]$Cancel = { $false },
+
+        [Parameter()]
+        [scriptblock]$ReportProgress = {}
     )
 
     $parentFolderName = 'Modele'
@@ -26,35 +25,46 @@ function Set-CameraGroupByModel {
     $cameras = Get-VmsCameraReport
     & $Log "$($cameras.Count) cameras trouvees."
 
-    # Creer ou recuperer le dossier parent
     $parentFolder = Get-VmsDeviceGroup -Name $parentFolderName -ErrorAction SilentlyContinue
     if (-not $parentFolder) {
         $parentFolder = New-VmsDeviceGroup -Name $parentFolderName
         & $Log "Dossier parent '$parentFolderName' cree."
     }
 
-    # Grouper par modele
     $camerasByModel = $cameras | Group-Object -Property Model
-    & $Log "$($camerasByModel.Count) modeles differents detectes."
+    $total          = $camerasByModel.Count
+    & $Log "$total modeles differents detectes."
 
+    $done = 0
     foreach ($group in $camerasByModel) {
-        $model = $group.Name
-        if ([string]::IsNullOrWhiteSpace($model)) {
-            $model = 'Inconnu'
+        if (& $Cancel) {
+            & $Log "AVERTISSEMENT: Operation annulee apres $done / $total modeles."
+            break
         }
 
-        # Creer ou recuperer le sous-dossier du modele
+        $done++
+        & $ReportProgress $done $total
+
+        $model = if ([string]::IsNullOrWhiteSpace($group.Name)) { 'Inconnu' } else { $group.Name }
+
         $deviceGroup = Get-VmsDeviceGroup -ParentGroup $parentFolder -Name $model -ErrorAction SilentlyContinue
         if (-not $deviceGroup) {
             $deviceGroup = New-VmsDeviceGroup -ParentGroup $parentFolder -Name $model
         }
 
         foreach ($camera in $group.Group) {
-            Add-VmsDeviceGroupMember -Group $deviceGroup -DeviceId $camera.Id
+            # Verifier si la camera est deja membre du groupe pour eviter les doublons
+            $alreadyMember = Get-VmsDeviceGroupMember -Group $deviceGroup -ErrorAction SilentlyContinue |
+                Where-Object { $_.Id -eq $camera.Id }
+            if (-not $alreadyMember) {
+                Add-VmsDeviceGroupMember -Group $deviceGroup -DeviceId $camera.Id
+            }
         }
 
         & $Log "Modele '$model' : $($group.Count) camera(s) ajoutee(s)."
     }
 
-    & $Log "Organisation par modele terminee."
+    if (-not (& $Cancel)) {
+        & $Log "Organisation par modele terminee."
+    }
 }

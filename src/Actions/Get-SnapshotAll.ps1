@@ -1,10 +1,6 @@
 <#
 .SYNOPSIS
     Capture un snapshot de toutes les cameras du VMS Milestone.
-.PARAMETER Config
-    Hashtable de configuration (outputDirectory, snapshotQuality).
-.PARAMETER Log
-    Scriptblock callback pour logger vers l'UI.
 #>
 
 function Get-SnapshotAll {
@@ -14,7 +10,13 @@ function Get-SnapshotAll {
         [hashtable]$Config,
 
         [Parameter(Mandatory)]
-        [scriptblock]$Log
+        [scriptblock]$Log,
+
+        [Parameter()]
+        [scriptblock]$Cancel = { $false },
+
+        [Parameter()]
+        [scriptblock]$ReportProgress = {}
     )
 
     $snapshotDir = Join-Path $Config.outputDirectory 'Snapshots'
@@ -24,12 +26,19 @@ function Get-SnapshotAll {
 
     & $Log "Recuperation de la liste des cameras..."
     $cameras = Get-VmsCamera
-    & $Log "$($cameras.Count) cameras trouvees. Capture en cours..."
+    $total   = @($cameras).Count
+    & $Log "$total cameras trouvees. Capture en cours..."
 
     $count = 0
     foreach ($cam in $cameras) {
+        if (& $Cancel) {
+            & $Log "AVERTISSEMENT: Operation annulee apres $count / $total cameras."
+            break
+        }
+
         $count++
-        & $Log "[$count/$($cameras.Count)] Snapshot de '$($cam.Name)'..."
+        & $ReportProgress $count $total
+        & $Log "[$count/$total] Snapshot de '$($cam.Name)'..."
 
         try {
             $cam | Get-Snapshot `
@@ -44,5 +53,7 @@ function Get-SnapshotAll {
         }
     }
 
-    & $Log "Terminee. $count snapshots traites dans : $snapshotDir"
+    if (-not (& $Cancel)) {
+        & $Log "$count snapshots traites dans : $snapshotDir"
+    }
 }

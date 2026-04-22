@@ -1,0 +1,656 @@
+<#
+.SYNOPSIS
+    Fenetre GUI de verification des dependances au demarrage.
+.NOTES
+    Toutes les variables partagees utilisent le prefixe $script:_SC_ pour etre
+    accessibles depuis les gestionnaires d'evenements WPF (portee differente).
+#>
+
+function Show-StartupCheck {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$AppRoot
+    )
+
+    Add-Type -AssemblyName PresentationFramework
+    Add-Type -AssemblyName PresentationCore
+    Add-Type -AssemblyName WindowsBase
+
+    # ----------------------------------------------------------------
+    # Etat partage via $script: pour l'accessibilite depuis les events
+    # ----------------------------------------------------------------
+    $script:_SC_Result      = $false
+    $script:_SC_AppRoot     = $AppRoot
+    $script:_SC_DepsPath    = Join-Path $AppRoot 'Dependencies'
+    $script:_SC_IsOffline   = Test-Path $script:_SC_DepsPath
+    $script:_SC_DepRows     = @{}
+    $script:_SC_Modules     = @(
+        @{ Name = 'MilestonePSTools'; Description = 'SDK Milestone VMS — connexion au Management Server' }
+    )
+
+    # ----------------------------------------------------------------
+    # XAML
+    # ----------------------------------------------------------------
+    $xaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Milestone Toolkit &#x2014; Demarrage"
+        Width="580" Height="530"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E2E"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background"      Value="#89B4FA"/>
+            <Setter Property="Foreground"      Value="#1E1E2E"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Padding"         Value="20,10"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#B4D0FF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#7AA2F7"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryBtn" TargetType="Button">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="Foreground"      Value="#A6ADC8"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="Padding"         Value="20,10"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush"     Value="#45475A"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#313244"/>
+                                <Setter Property="Foreground" Value="#CDD6F4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WarnBtn" TargetType="Button">
+            <Setter Property="Background"      Value="#F9A825"/>
+            <Setter Property="Foreground"      Value="#1E1E2E"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Padding"         Value="20,10"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FFCA28"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#F57F17"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="GreenBtn" TargetType="Button">
+            <Setter Property="Background"      Value="#A6E3A1"/>
+            <Setter Property="Foreground"      Value="#1E1E2E"/>
+            <Setter Property="FontSize"        Value="12"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Padding"         Value="14,8"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#C3F0BE"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#89D4A1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- En-tete -->
+        <Border Grid.Row="0" Background="#181825" Padding="32,24,32,20">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="38" Height="38" Background="#89B4FA" CornerRadius="8"
+                        Margin="0,0,14,0" VerticalAlignment="Center">
+                    <TextBlock Text="M" FontSize="22" FontWeight="Bold"
+                               Foreground="#1E1E2E"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Milestone Toolkit"
+                               FontSize="20" FontWeight="Bold" Foreground="#CDD6F4"/>
+                    <TextBlock Text="Verification des dependances au demarrage"
+                               FontSize="12" Foreground="#6C7086" Margin="0,3,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Zone des dependances -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="24,20,24,0">
+            <StackPanel x:Name="DepsPanel"/>
+        </ScrollViewer>
+
+        <!-- Banniere mode offline (cachee par defaut) -->
+        <Border x:Name="OfflineBanner" Grid.Row="2"
+                Background="#2A2A1A" BorderBrush="#F9A825" BorderThickness="0,0,0,0"
+                CornerRadius="6" Margin="24,12,24,0" Padding="16,12"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock x:Name="OfflineBannerTitle"
+                               Text="Cache local detecte"
+                               FontSize="12" FontWeight="SemiBold"
+                               Foreground="#F9A825"/>
+                    <TextBlock x:Name="OfflineBannerText"
+                               Text=""
+                               FontSize="11" Foreground="#A6ADC8"
+                               TextWrapping="Wrap" Margin="0,3,0,0"/>
+                </StackPanel>
+                <Button x:Name="BtnSaveDeps" Grid.Column="1"
+                        Content="Preparer offline" Margin="12,0,0,0"
+                        Style="{StaticResource GreenBtn}"
+                        Visibility="Collapsed"/>
+            </Grid>
+        </Border>
+
+        <!-- Statut / progression -->
+        <StackPanel Grid.Row="3" Margin="24,12,24,8">
+            <ProgressBar x:Name="ProgressBar"
+                         Height="3" IsIndeterminate="True"
+                         Background="#313244" Foreground="#89B4FA"
+                         BorderThickness="0" Visibility="Collapsed"
+                         Margin="0,0,0,10"/>
+            <TextBlock x:Name="StatusText"
+                       Text="Verification en cours..."
+                       FontSize="12" Foreground="#A6ADC8" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Boutons -->
+        <Border Grid.Row="4" Background="#181825" Padding="24,14">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BtnQuit"    Content="Quitter"
+                        Style="{StaticResource SecondaryBtn}" Margin="0,0,10,0"/>
+                <Button x:Name="BtnInstall" Content="Installer les dependances"
+                        Style="{StaticResource WarnBtn}"
+                        Visibility="Collapsed" Margin="0,0,10,0"/>
+                <Button x:Name="BtnLaunch"  Content="Lancer l'application"
+                        Style="{StaticResource PrimaryBtn}" IsEnabled="False"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
+'@
+
+    # ----------------------------------------------------------------
+    # Chargement de la fenetre
+    # ----------------------------------------------------------------
+    $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xaml))
+    $script:_SC_Win         = [System.Windows.Markup.XamlReader]::Load($reader)
+
+    $script:_SC_DepsPanel   = $script:_SC_Win.FindName('DepsPanel')
+    $script:_SC_Progress    = $script:_SC_Win.FindName('ProgressBar')
+    $script:_SC_Status      = $script:_SC_Win.FindName('StatusText')
+    $script:_SC_BtnInstall  = $script:_SC_Win.FindName('BtnInstall')
+    $script:_SC_BtnLaunch   = $script:_SC_Win.FindName('BtnLaunch')
+    $script:_SC_BtnQuit     = $script:_SC_Win.FindName('BtnQuit')
+    $script:_SC_BtnSaveDeps = $script:_SC_Win.FindName('BtnSaveDeps')
+    $script:_SC_OfflineBanner      = $script:_SC_Win.FindName('OfflineBanner')
+    $script:_SC_OfflineBannerTitle = $script:_SC_Win.FindName('OfflineBannerTitle')
+    $script:_SC_OfflineBannerText  = $script:_SC_Win.FindName('OfflineBannerText')
+
+    # ----------------------------------------------------------------
+    # Creation des lignes de dependances
+    # ----------------------------------------------------------------
+    foreach ($mod in $script:_SC_Modules) {
+        $name = $mod.Name
+        $desc = $mod.Description
+
+        $indicator = [System.Windows.Shapes.Ellipse]::new()
+        $indicator.Width  = 12
+        $indicator.Height = 12
+        $indicator.Fill   = [System.Windows.Media.Brushes]::Gray
+        $indicator.VerticalAlignment = 'Center'
+        $indicator.Margin = [System.Windows.Thickness]::new(0,0,14,0)
+
+        $lblName = [System.Windows.Controls.TextBlock]::new()
+        $lblName.Text       = $name
+        $lblName.FontSize   = 13
+        $lblName.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $lblName.Foreground = [System.Windows.Media.Brushes]::White
+
+        $lblDesc = [System.Windows.Controls.TextBlock]::new()
+        $lblDesc.Text       = $desc
+        $lblDesc.FontSize   = 11
+        $lblDesc.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(108,112,134))
+        $lblDesc.Margin     = [System.Windows.Thickness]::new(0,3,0,0)
+
+        $nameStack = [System.Windows.Controls.StackPanel]::new()
+        $nameStack.VerticalAlignment = 'Center'
+        [void]$nameStack.Children.Add($lblName)
+        [void]$nameStack.Children.Add($lblDesc)
+
+        $lblStatus = [System.Windows.Controls.TextBlock]::new()
+        $lblStatus.Text              = 'En attente...'
+        $lblStatus.FontSize          = 12
+        $lblStatus.Foreground        = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(166,173,200))
+        $lblStatus.VerticalAlignment = 'Center'
+
+        $rowGrid = [System.Windows.Controls.Grid]::new()
+        $c0 = [System.Windows.Controls.ColumnDefinition]::new(); $c0.Width = [System.Windows.GridLength]::Auto
+        $c1 = [System.Windows.Controls.ColumnDefinition]::new(); $c1.Width = [System.Windows.GridLength]::new(1,[System.Windows.GridUnitType]::Star)
+        $c2 = [System.Windows.Controls.ColumnDefinition]::new(); $c2.Width = [System.Windows.GridLength]::Auto
+        [void]$rowGrid.ColumnDefinitions.Add($c0)
+        [void]$rowGrid.ColumnDefinitions.Add($c1)
+        [void]$rowGrid.ColumnDefinitions.Add($c2)
+        [System.Windows.Controls.Grid]::SetColumn($indicator, 0)
+        [System.Windows.Controls.Grid]::SetColumn($nameStack,  1)
+        [System.Windows.Controls.Grid]::SetColumn($lblStatus,  2)
+        [void]$rowGrid.Children.Add($indicator)
+        [void]$rowGrid.Children.Add($nameStack)
+        [void]$rowGrid.Children.Add($lblStatus)
+
+        $card = [System.Windows.Controls.Border]::new()
+        $card.Background   = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(24,24,37))
+        $card.CornerRadius = [System.Windows.CornerRadius]::new(8)
+        $card.Padding      = [System.Windows.Thickness]::new(16,14,16,14)
+        $card.Margin       = [System.Windows.Thickness]::new(0,0,0,10)
+        $card.Child        = $rowGrid
+        [void]$script:_SC_DepsPanel.Children.Add($card)
+
+        $script:_SC_DepRows[$name] = @{
+            Indicator = $indicator
+            Status    = $lblStatus
+            Available = $false
+        }
+    }
+
+    # ----------------------------------------------------------------
+    # Blocs de script partages
+    # ----------------------------------------------------------------
+
+    $script:_SC_Refresh = {
+        $script:_SC_Win.Dispatcher.Invoke(
+            [System.Windows.Threading.DispatcherPriority]::Render,
+            [Action]{}
+        )
+    }
+
+    $script:_SC_SetStatus = {
+        param([string]$Name, [string]$State, [string]$Label)
+        $row = $script:_SC_DepRows[$Name]
+        $row.Status.Text = $Label
+        $color = switch ($State) {
+            'checking'   { [System.Windows.Media.Color]::FromRgb(249,168, 37) }
+            'ok'         { [System.Windows.Media.Color]::FromRgb(166,227,161) }
+            'missing'    { [System.Windows.Media.Color]::FromRgb(243,139,168) }
+            'installing' { [System.Windows.Media.Color]::FromRgb(137,180,250) }
+            'error'      { [System.Windows.Media.Color]::FromRgb(243,139,168) }
+        }
+        $row.Indicator.Fill = [System.Windows.Media.SolidColorBrush]::new($color)
+        if ($State -eq 'ok')                    { $row.Available = $true  }
+        if ($State -in @('missing','error'))    { $row.Available = $false }
+        & $script:_SC_Refresh
+    }
+
+    $script:_SC_Check = {
+        $allOk = $true
+
+        foreach ($mod in $script:_SC_Modules) {
+            $name = $mod.Name
+            & $script:_SC_SetStatus $name 'checking' 'Verification...'
+
+            $found = $false
+
+            # 1. Dossier Dependencies/ local (prioritaire)
+            if ($script:_SC_IsOffline) {
+                $localPath = Join-Path $script:_SC_DepsPath $name
+                if (Test-Path $localPath) {
+                    & $script:_SC_SetStatus $name 'ok' 'Disponible (cache local)'
+                    $found = $true
+                }
+            }
+
+            # 2. Module installe sur le systeme
+            if (-not $found) {
+                $installed = Get-Module -ListAvailable -Name $name -ErrorAction SilentlyContinue
+                if ($installed) {
+                    $ver = ($installed | Sort-Object Version -Descending | Select-Object -First 1).Version
+                    & $script:_SC_SetStatus $name 'ok' "Installe  v$ver"
+                    $found = $true
+                }
+            }
+
+            if (-not $found) {
+                & $script:_SC_SetStatus $name 'missing' 'Non installe'
+                $allOk = $false
+            }
+        }
+
+        # --- Banniere cache / connexion ---
+        if ($script:_SC_IsOffline) {
+            $script:_SC_OfflineBanner.Visibility    = 'Visible'
+            $script:_SC_OfflineBannerTitle.Text     = 'Cache local detecte'
+
+            $missingLocally = $script:_SC_Modules | Where-Object {
+                -not (Test-Path (Join-Path $script:_SC_DepsPath $_.Name))
+            }
+
+            if ($missingLocally) {
+                $names = ($missingLocally | ForEach-Object { $_.Name }) -join ', '
+                $script:_SC_OfflineBannerText.Text =
+                    "Module(s) absent(s) du cache local : $names. Connectez-vous a Internet et cliquez 'Preparer offline'."
+                $script:_SC_BtnSaveDeps.Visibility = 'Visible'
+            }
+            else {
+                $script:_SC_OfflineBannerText.Text =
+                    "Tous les modules sont en cache local. Le projet peut etre utilise sans Internet."
+                $script:_SC_BtnSaveDeps.Visibility = 'Collapsed'
+            }
+        }
+        else {
+            $script:_SC_OfflineBanner.Visibility    = 'Visible'
+            $script:_SC_OfflineBannerTitle.Text     = 'Connexion Internet disponible'
+            $script:_SC_OfflineBannerText.Text =
+                "Cliquez 'Preparer offline' pour sauvegarder les modules et utiliser le projet sans connexion."
+            $script:_SC_BtnSaveDeps.Visibility = 'Visible'
+        }
+
+        # --- Boutons principaux ---
+        if ($allOk) {
+            $script:_SC_BtnLaunch.IsEnabled  = $true
+            $script:_SC_BtnInstall.Visibility = 'Collapsed'
+            $script:_SC_Status.Text = 'Toutes les dependances sont disponibles. Pret a lancer.'
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(166,227,161))
+        }
+        elseif ($script:_SC_IsOffline) {
+            # Offline ET module manquant du cache : pas d'install possible sans internet
+            $script:_SC_BtnInstall.Visibility = 'Collapsed'
+            $script:_SC_Status.Text = 'Impossible d''installer sans Internet. Voir le message ci-dessus.'
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(243,139,168))
+        }
+        else {
+            $script:_SC_BtnInstall.Visibility = 'Visible'
+            $script:_SC_Status.Text = 'Des dependances sont manquantes. Cliquez sur "Installer les dependances".'
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(249,168,37))
+        }
+
+        & $script:_SC_Refresh
+    }
+
+    $script:_SC_Install = {
+        $script:_SC_BtnInstall.IsEnabled = $false
+        $script:_SC_BtnQuit.IsEnabled    = $false
+        $script:_SC_Progress.Visibility  = 'Visible'
+        $script:_SC_Status.Foreground    = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(166,173,200))
+
+        $anyError = $false
+
+        $oldProgress    = $ProgressPreference
+        $oldInformation = $InformationPreference
+        $ProgressPreference    = 'SilentlyContinue'
+        $InformationPreference = 'SilentlyContinue'
+
+        # Pre-installer le fournisseur NuGet silencieusement (-Force supprime le prompt)
+        $script:_SC_Status.Text = 'Preparation du fournisseur NuGet...'
+        & $script:_SC_Refresh
+        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
+            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+
+        foreach ($mod in $script:_SC_Modules) {
+            $name = $mod.Name
+            if ($script:_SC_DepRows[$name].Available) { continue }
+
+            & $script:_SC_SetStatus $name 'installing' 'Installation...'
+            $script:_SC_Status.Text = "Installation de $name depuis PowerShell Gallery..."
+            & $script:_SC_Refresh
+
+            try {
+                $null = Install-Module -Name $name -Force -Scope CurrentUser `
+                    -ErrorAction Stop -WarningAction SilentlyContinue
+
+                $installed = Get-Module -ListAvailable -Name $name -ErrorAction SilentlyContinue
+                $ver = ($installed | Sort-Object Version -Descending | Select-Object -First 1).Version
+                & $script:_SC_SetStatus $name 'ok' "Installe  v$ver"
+            }
+            catch {
+                & $script:_SC_SetStatus $name 'error' "Erreur : $($_.Exception.Message)"
+                $anyError = $true
+            }
+        }
+
+        $ProgressPreference    = $oldProgress
+        $InformationPreference = $oldInformation
+
+        $script:_SC_Progress.Visibility = 'Collapsed'
+        $script:_SC_BtnQuit.IsEnabled   = $true
+
+        if ($anyError) {
+            $script:_SC_BtnInstall.IsEnabled = $true
+            $script:_SC_Status.Text = 'Certaines installations ont echoue. Verifiez votre connexion Internet.'
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(243,139,168))
+        }
+        else {
+            $script:_SC_BtnLaunch.IsEnabled   = $true
+            $script:_SC_BtnInstall.Visibility = 'Collapsed'
+            $script:_SC_Status.Text = 'Installation terminee. Pret a lancer.'
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(166,227,161))
+            $script:_SC_BtnSaveDeps.Visibility = 'Visible'
+        }
+        & $script:_SC_Refresh
+    }
+
+    # Sauvegarde offline via Save-Module inline (pas de nouvelle fenetre console)
+    $script:_SC_SaveDeps = {
+        $confirm = [System.Windows.MessageBox]::Show(
+            "Cette operation va telecharger les modules dans le dossier Dependencies/.`n`nVous pourrez ensuite copier tout le projet sur une machine sans Internet.`n`nContinuer ?",
+            'Preparer pour usage offline',
+            'YesNo', 'Question'
+        )
+        if ($confirm -ne 'Yes') { return }
+
+        $script:_SC_BtnSaveDeps.IsEnabled = $false
+        $script:_SC_BtnQuit.IsEnabled     = $false
+        $script:_SC_Progress.Visibility   = 'Visible'
+        $script:_SC_Status.Foreground     = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(166,173,200))
+
+        $anyError = $false
+
+        $oldProgress    = $ProgressPreference
+        $oldInformation = $InformationPreference
+        $ProgressPreference    = 'SilentlyContinue'
+        $InformationPreference = 'SilentlyContinue'
+
+        if (-not (Test-Path $script:_SC_DepsPath)) {
+            New-Item -Path $script:_SC_DepsPath -ItemType Directory -Force | Out-Null
+        }
+
+        # Pre-installer le fournisseur NuGet silencieusement (-Force supprime le prompt)
+        # On le fait une fois ici pour que Save-Module ne demande rien
+        $script:_SC_Status.Text = 'Preparation du fournisseur NuGet...'
+        & $script:_SC_Refresh
+        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
+            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+
+        foreach ($mod in $script:_SC_Modules) {
+            $name = $mod.Name
+            & $script:_SC_SetStatus $name 'installing' 'Sauvegarde en cours...'
+            $script:_SC_Status.Text = "Telechargement de $name pour usage offline..."
+            & $script:_SC_Refresh
+
+            try {
+                $localPath = Join-Path $script:_SC_DepsPath $name
+                if (Test-Path $localPath) {
+                    Remove-Item $localPath -Recurse -Force
+                }
+
+                $null = Save-Module -Name $name -Path $script:_SC_DepsPath `
+                    -Force -ErrorAction Stop -WarningAction SilentlyContinue
+
+                & $script:_SC_SetStatus $name 'ok' 'Cache local cree'
+            }
+            catch {
+                & $script:_SC_SetStatus $name 'error' "Erreur : $($_.Exception.Message)"
+                $anyError = $true
+            }
+        }
+
+        $ProgressPreference    = $oldProgress
+        $InformationPreference = $oldInformation
+
+        $script:_SC_Progress.Visibility   = 'Collapsed'
+        $script:_SC_BtnSaveDeps.IsEnabled = $true
+        $script:_SC_BtnQuit.IsEnabled     = $true
+
+        if (-not $anyError) {
+            $script:_SC_IsOffline = $true
+            $script:_SC_BtnSaveDeps.Content = 'Mettre a jour le cache'
+            # Relancer la verification : trouve le cache et active le bouton Lancer
+            & $script:_SC_Check
+        }
+        else {
+            $script:_SC_Status.Text = 'La sauvegarde a echoue. Verifiez votre connexion Internet.'
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(243,139,168))
+            & $script:_SC_Refresh
+        }
+    }
+
+    # ----------------------------------------------------------------
+    # Gestionnaires d'evenements
+    # ----------------------------------------------------------------
+    $script:_SC_Win.Add_Loaded({
+        try   { & $script:_SC_Check }
+        catch {
+            [System.Windows.MessageBox]::Show(
+                "Erreur lors de la verification :`n`n$_",
+                'Milestone Toolkit — Erreur', 'OK', 'Error'
+            ) | Out-Null
+        }
+    })
+
+    $script:_SC_BtnInstall.Add_Click({
+        try {
+            & $script:_SC_Install
+        }
+        catch {
+            [System.Windows.MessageBox]::Show(
+                "Erreur lors de l'installation :`n`n$_",
+                'Milestone Toolkit — Erreur', 'OK', 'Error'
+            ) | Out-Null
+            $script:_SC_BtnInstall.IsEnabled = $true
+            $script:_SC_BtnQuit.IsEnabled    = $true
+            $script:_SC_Progress.Visibility  = 'Collapsed'
+        }
+    })
+
+    $script:_SC_BtnSaveDeps.Add_Click({
+        try   { & $script:_SC_SaveDeps }
+        catch {
+            [System.Windows.MessageBox]::Show(
+                "Erreur : $_",
+                'Milestone Toolkit — Erreur', 'OK', 'Error'
+            ) | Out-Null
+        }
+    })
+
+    $script:_SC_BtnLaunch.Add_Click({
+        $script:_SC_Result = $true
+        $script:_SC_Win.Close()
+    })
+
+    $script:_SC_BtnQuit.Add_Click({
+        $script:_SC_Result = $false
+        $script:_SC_Win.Close()
+    })
+
+    # ----------------------------------------------------------------
+    # Affichage (bloquant jusqu'a fermeture)
+    # ----------------------------------------------------------------
+    [void]$script:_SC_Win.ShowDialog()
+    return $script:_SC_Result
+}

@@ -1,10 +1,6 @@
 <#
 .SYNOPSIS
     Capture un snapshot d'une camera selectionnee via le dialogue Milestone.
-.PARAMETER Config
-    Hashtable de configuration (outputDirectory, snapshotQuality).
-.PARAMETER Log
-    Scriptblock callback pour logger vers l'UI. Usage : & $Log "message"
 #>
 
 function Get-SnapshotSelected {
@@ -14,7 +10,10 @@ function Get-SnapshotSelected {
         [hashtable]$Config,
 
         [Parameter(Mandatory)]
-        [scriptblock]$Log
+        [scriptblock]$Log,
+
+        [Parameter()]
+        [scriptblock]$Cancel = { $false }
     )
 
     & $Log "Ouverture du selecteur de camera..."
@@ -25,6 +24,8 @@ function Get-SnapshotSelected {
         return
     }
 
+    if (& $Cancel) { return }
+
     $snapshotDir = Join-Path $Config.outputDirectory 'Snapshots'
     if (-not (Test-Path $snapshotDir)) {
         New-Item -Path $snapshotDir -ItemType Directory -Force | Out-Null
@@ -32,12 +33,17 @@ function Get-SnapshotSelected {
 
     & $Log "Capture du snapshot de '$($camera.Name)'..."
 
-    $camera | Get-Snapshot `
-        -UseFriendlyName `
-        -Behavior GetEnd `
-        -Quality $Config.snapshotQuality `
-        -Save `
-        -Path $snapshotDir
+    try {
+        $camera | Get-Snapshot `
+            -UseFriendlyName `
+            -Behavior GetEnd `
+            -Quality $Config.snapshotQuality `
+            -Save `
+            -Path $snapshotDir
 
-    & $Log "Snapshot enregistre dans : $snapshotDir"
+        & $Log "Snapshot enregistre dans : $snapshotDir"
+    }
+    catch {
+        & $Log "ERREUR: Echec du snapshot de '$($camera.Name)' : $_"
+    }
 }

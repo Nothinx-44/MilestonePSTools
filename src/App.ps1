@@ -1,9 +1,6 @@
 <#
 .SYNOPSIS
     Point d'entree principal de l'application Milestone Toolkit.
-.DESCRIPTION
-    Charge la configuration, initialise les modules, etablit la connexion au serveur
-    Milestone, charge l'interface WPF et connecte les evenements aux actions.
 #>
 
 param(
@@ -18,7 +15,6 @@ param(
 $script:AppRoot = $RootPath
 $script:SrcPath = Join-Path $AppRoot 'src'
 
-# Charger la configuration
 $configPath = Join-Path $AppRoot 'config.json'
 if (Test-Path $configPath) {
     $configRaw = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -34,7 +30,6 @@ else {
     }
 }
 
-# Convertir les chemins relatifs en absolus
 $outputDir = $configRaw.outputDirectory
 if (-not [System.IO.Path]::IsPathRooted($outputDir)) {
     $outputDir = Join-Path $AppRoot $outputDir
@@ -43,23 +38,21 @@ if (-not [System.IO.Path]::IsPathRooted($outputDir)) {
 $script:DependenciesPath = Join-Path $AppRoot 'Dependencies'
 
 $script:Config = @{
-    outputDirectory  = $outputDir
-    snapshotQuality  = [int]$configRaw.snapshotQuality
-    csvDelimiter     = $configRaw.csvDelimiter
-    csvEncoding      = $configRaw.csvEncoding
-    logDirectory     = Join-Path $AppRoot 'Logs'
+    outputDirectory = $outputDir
+    snapshotQuality = [int]$configRaw.snapshotQuality
+    csvDelimiter    = $configRaw.csvDelimiter
+    csvEncoding     = $configRaw.csvEncoding
+    logDirectory    = Join-Path $AppRoot 'Logs'
 }
 
 # ============================================================
 # 2. CHARGEMENT DES SCRIPTS
 # ============================================================
 
-# Core
 . (Join-Path $SrcPath 'Core/Initialize-Modules.ps1')
 . (Join-Path $SrcPath 'Core/Write-ActivityLog.ps1')
 . (Join-Path $SrcPath 'Core/Invoke-PtzPreset.ps1')
 
-# Actions
 . (Join-Path $SrcPath 'Actions/Get-SnapshotSelected.ps1')
 . (Join-Path $SrcPath 'Actions/Get-SnapshotAll.ps1')
 . (Join-Path $SrcPath 'Actions/Export-HardwareReport.ps1')
@@ -70,8 +63,6 @@ $script:Config = @{
 # 3. INITIALISATION DES MODULES ET CONNEXION
 # ============================================================
 
-# Determiner le mode d'installation
-# Auto = utilise Dependencies/ si present, sinon Online
 $installMode = $configRaw.installMode
 if (-not $installMode -or $installMode -eq 'Auto') {
     if (Test-Path $DependenciesPath) {
@@ -94,18 +85,10 @@ Write-Host 'Connecte.' -ForegroundColor Green
 # 4. MASQUER LA CONSOLE
 # ============================================================
 
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public class ConsoleHelper {
-    [DllImport("kernel32.dll")]
-    public static extern IntPtr GetConsoleWindow();
-
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-}
-"@
+Add-Type -Name ConsoleHelper -Namespace '' -MemberDefinition @'
+    [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
+    [DllImport("user32.dll")]   public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+'@ -ErrorAction SilentlyContinue
 
 $consoleHandle = [ConsoleHelper]::GetConsoleWindow()
 [ConsoleHelper]::ShowWindow($consoleHandle, 0) | Out-Null
@@ -117,11 +100,11 @@ $consoleHandle = [ConsoleHelper]::GetConsoleWindow()
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName PresentationCore
 Add-Type -AssemblyName WindowsBase
+Add-Type -AssemblyName System.Windows.Forms
 
-$xamlPath = Join-Path $SrcPath 'UI/MainWindow.xaml'
+$xamlPath    = Join-Path $SrcPath 'UI/MainWindow.xaml'
 $xamlContent = Get-Content $xamlPath -Raw -Encoding UTF8
-
-$xamlReader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xamlContent))
+$xamlReader  = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xamlContent))
 $script:Window = [System.Windows.Markup.XamlReader]::Load($xamlReader)
 
 # ============================================================
@@ -133,6 +116,7 @@ $script:ActionStatus     = $Window.FindName('ActionStatus')
 $script:ProgressBar      = $Window.FindName('ProgressBar')
 $script:StatusIndicator  = $Window.FindName('StatusIndicator')
 $script:StatusText       = $Window.FindName('StatusText')
+$script:OutputDirText    = $Window.FindName('OutputDirText')
 
 $script:BtnSnapshotSelected = $Window.FindName('BtnSnapshotSelected')
 $script:BtnSnapshotAll      = $Window.FindName('BtnSnapshotAll')
@@ -140,33 +124,79 @@ $script:BtnPtzSnapshot      = $Window.FindName('BtnPtzSnapshot')
 $script:BtnExportHardware   = $Window.FindName('BtnExportHardware')
 $script:BtnGroupByModel     = $Window.FindName('BtnGroupByModel')
 $script:BtnClearLog         = $Window.FindName('BtnClearLog')
+$script:BtnCancel           = $Window.FindName('BtnCancel')
+$script:BtnOutputDir        = $Window.FindName('BtnOutputDir')
 
-# Mettre a jour le statut de connexion
-$StatusIndicator.Fill = [System.Windows.Media.Brushes]::LightGreen
-$StatusText.Text = 'Connecte'
+# Initialiser le document RichTextBox (supprimer le paragraphe vide par defaut)
+$script:LogOutput.Document.Blocks.Clear()
+$script:LogOutput.Document.PagePadding = [System.Windows.Thickness]::new(16, 12, 16, 12)
+
+# Statut de connexion
+$script:StatusIndicator.Fill = [System.Windows.Media.Brushes]::LightGreen
+$script:StatusText.Text      = 'Connecte'
+
+# Dossier de sortie dans la sidebar
+$script:OutputDirText.Text   = $script:Config.outputDirectory
 
 # ============================================================
-# 7. FONCTIONS UTILITAIRES UI
+# 7. ETAT PARTAGE POUR CANCEL ET PROGRESS
+# ============================================================
+
+$script:CancelRequested = $false
+
+# Callbacks passes aux actions
+$script:IsCancelled = { $script:CancelRequested }
+
+$script:ReportProgress = {
+    param([int]$Current, [int]$Total)
+    if ($Total -gt 0) {
+        $script:ProgressBar.IsIndeterminate = $false
+        $script:ProgressBar.Maximum         = [double]$Total
+        $script:ProgressBar.Value           = [double]$Current
+    }
+    # Pomper le dispatcher : traite les evenements en attente (clic Annuler inclus)
+    [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+        [System.Windows.Threading.DispatcherPriority]::Background, [Action]{}
+    )
+}
+
+# ============================================================
+# 8. FONCTIONS UTILITAIRES UI
 # ============================================================
 
 function Write-UILog {
-    param([string]$Message)
-    $timestamp = Get-Date -Format 'HH:mm:ss'
-    $logLine = "[$timestamp] $Message`r`n"
-    $LogOutput.AppendText($logLine)
-    $LogOutput.ScrollToEnd()
-
-    # Forcer le rafraichissement de l'UI
-    [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
-        [System.Windows.Threading.DispatcherPriority]::Background,
-        [Action]{}
+    param(
+        [string]$Message,
+        [string]$Level = 'INFO'
     )
 
-    # Ecrire aussi dans le fichier de log
-    Write-ActivityLog -Message $Message -Level 'INFO' -LogDirectory $Config.logDirectory
+    $timestamp = Get-Date -Format 'HH:mm:ss'
+    $fullMsg   = "[$timestamp] $Message"
+
+    $brush = switch ($Level) {
+        'ERROR'   { [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(243,139,168)) }
+        'WARN'    { [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(249,168, 37)) }
+        'SUCCESS' { [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(166,227,161)) }
+        'ACTION'  { [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(137,180,250)) }
+        default   { [System.Windows.Media.SolidColorBrush]::new([System.Windows.Media.Color]::FromRgb(205,214,244)) }
+    }
+
+    $run  = [System.Windows.Documents.Run]::new($fullMsg)
+    $run.Foreground = $brush
+    $para = [System.Windows.Documents.Paragraph]::new($run)
+    $para.Margin     = [System.Windows.Thickness]::new(0)
+    $para.LineHeight = 20
+    $script:LogOutput.Document.Blocks.Add($para)
+    $script:LogOutput.ScrollToEnd()
+
+    [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+        [System.Windows.Threading.DispatcherPriority]::Render, [Action]{}
+    )
+
+    $fileLevel = if ($Level -in 'ACTION','INFO') { 'INFO' } else { $Level }
+    Write-ActivityLog -Message $Message -Level $fileLevel -LogDirectory $script:Config.logDirectory
 }
 
-# Liste de tous les boutons d'action pour activer/desactiver en bloc
 $script:ActionButtons = @(
     $BtnSnapshotSelected, $BtnSnapshotAll, $BtnPtzSnapshot,
     $BtnExportHardware, $BtnGroupByModel
@@ -174,41 +204,47 @@ $script:ActionButtons = @(
 
 function Set-UIBusy {
     param([string]$ActionName)
-    foreach ($btn in $ActionButtons) { $btn.IsEnabled = $false }
-    $ActionStatus.Text = $ActionName
-    $ProgressBar.IsIndeterminate = $true
-    $ProgressBar.Visibility = [System.Windows.Visibility]::Visible
-    $Window.Cursor = [System.Windows.Input.Cursors]::Wait
+    foreach ($btn in $script:ActionButtons) { $btn.IsEnabled = $false }
+    $script:BtnCancel.Visibility        = [System.Windows.Visibility]::Visible
+    $script:ActionStatus.Text           = $ActionName
+    $script:ProgressBar.IsIndeterminate = $true
+    $script:ProgressBar.Visibility      = [System.Windows.Visibility]::Visible
+    $Window.Cursor                      = [System.Windows.Input.Cursors]::Wait
 }
 
 function Set-UIReady {
-    foreach ($btn in $ActionButtons) { $btn.IsEnabled = $true }
-    $ActionStatus.Text = 'Pret'
-    $ProgressBar.IsIndeterminate = $false
-    $ProgressBar.Visibility = [System.Windows.Visibility]::Collapsed
-    $Window.Cursor = [System.Windows.Input.Cursors]::Arrow
+    foreach ($btn in $script:ActionButtons) { $btn.IsEnabled = $true }
+    $script:BtnCancel.Visibility        = [System.Windows.Visibility]::Collapsed
+    $script:ActionStatus.Text           = 'Pret'
+    $script:ProgressBar.IsIndeterminate = $false
+    $script:ProgressBar.Value           = 0
+    $script:ProgressBar.Visibility      = [System.Windows.Visibility]::Collapsed
+    $Window.Cursor                      = [System.Windows.Input.Cursors]::Arrow
 }
 
 function Invoke-Action {
-    <#
-    .SYNOPSIS
-        Execute une action en gerant l'etat de l'UI (busy/ready, logging, erreurs).
-    #>
     param(
         [string]$Name,
         [scriptblock]$Action
     )
 
+    $script:CancelRequested = $false
     Set-UIBusy -ActionName $Name
-    Write-UILog "--- $Name ---"
+    Write-UILog "--- $Name ---" 'ACTION'
 
     try {
         & $Action
-        Write-UILog "Action terminee avec succes."
+
+        if ($script:CancelRequested) {
+            Write-UILog "Operation annulee." 'WARN'
+        }
+        else {
+            Write-UILog "Action terminee avec succes." 'SUCCESS'
+        }
     }
     catch {
-        Write-UILog "ERREUR: $_"
-        Write-ActivityLog -Message $_.Exception.Message -Level 'ERROR' -LogDirectory $Config.logDirectory
+        Write-UILog "ERREUR: $_" 'ERROR'
+        Write-ActivityLog -Message $_.Exception.Message -Level 'ERROR' -LogDirectory $script:Config.logDirectory
     }
     finally {
         Set-UIReady
@@ -216,60 +252,86 @@ function Invoke-Action {
 }
 
 # ============================================================
-# 8. BRANCHEMENT DES EVENEMENTS
+# 9. BRANCHEMENT DES EVENEMENTS
 # ============================================================
 
-$logCallback = { param($Message) Write-UILog $Message }
+$logCallback = {
+    param([string]$Message)
+    $level = if ($Message -match '^ERREUR|^ERROR')           { 'ERROR'   }
+             elseif ($Message -match '^AVERTISSEMENT|^WARN') { 'WARN'    }
+             else                                            { 'INFO'    }
+    Write-UILog -Message $Message -Level $level
+}
 
 $BtnSnapshotSelected.Add_Click({
     Invoke-Action -Name 'Snapshot - Selection' -Action {
-        Get-SnapshotSelected -Config $Config -Log $logCallback
+        Get-SnapshotSelected -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled
     }
 })
 
 $BtnSnapshotAll.Add_Click({
     Invoke-Action -Name 'Snapshot - Toutes les cameras' -Action {
-        Get-SnapshotAll -Config $Config -Log $logCallback
+        Get-SnapshotAll -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnPtzSnapshot.Add_Click({
     Invoke-Action -Name 'Snapshot - Presets PTZ' -Action {
-        Get-PtzPresetSnapshot -Config $Config -Log $logCallback
+        Get-PtzPresetSnapshot -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnExportHardware.Add_Click({
     Invoke-Action -Name 'Export Hardware' -Action {
-        Export-HardwareReport -Config $Config -Log $logCallback
+        Export-HardwareReport -Config $script:Config -Log $logCallback
     }
 })
 
 $BtnGroupByModel.Add_Click({
     Invoke-Action -Name 'Grouper par Modele' -Action {
-        Set-CameraGroupByModel -Config $Config -Log $logCallback
+        Set-CameraGroupByModel -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnClearLog.Add_Click({
-    $LogOutput.Clear()
+    $script:LogOutput.Document.Blocks.Clear()
 })
 
-# Gestion de la fermeture
-$Window.Add_Closing({
-    Write-ActivityLog -Message 'Fermeture de l application' -Level 'INFO' -LogDirectory $Config.logDirectory
-    try { Disconnect-ManagementServer } catch {}
+$BtnCancel.Add_Click({
+    $script:CancelRequested = $true
+    $script:BtnCancel.IsEnabled = $false
+    $script:ActionStatus.Text = 'Annulation en cours...'
+})
 
-    # Reafficher la console
+$BtnOutputDir.Add_Click({
+    $dialog = [System.Windows.Forms.FolderBrowserDialog]::new()
+    $dialog.Description  = 'Choisir le dossier de sortie'
+    $dialog.SelectedPath = $script:Config.outputDirectory
+    $dialog.ShowNewFolderButton = $true
+
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $script:Config.outputDirectory = $dialog.SelectedPath
+        $script:OutputDirText.Text     = $dialog.SelectedPath
+        Write-UILog "Dossier de sortie change : $($dialog.SelectedPath)" 'INFO'
+    }
+})
+
+$Window.Add_Closing({
+    Write-ActivityLog -Message 'Fermeture de l application' -Level 'INFO' -LogDirectory $script:Config.logDirectory
+    try { Disconnect-ManagementServer } catch {}
     [ConsoleHelper]::ShowWindow($consoleHandle, 5) | Out-Null
 })
 
 # ============================================================
-# 9. AFFICHAGE
+# 10. AFFICHAGE
 # ============================================================
 
-Write-UILog "Application demarree. Connecte au serveur Milestone."
-Write-UILog "Repertoire de sortie : $($Config.outputDirectory)"
+Write-UILog "Application demarree. Connecte au serveur Milestone." 'SUCCESS'
+Write-UILog "Repertoire de sortie : $($script:Config.outputDirectory)"
 
 $Window.Add_Loaded({ $Window.Activate() })
 [void]$Window.ShowDialog()

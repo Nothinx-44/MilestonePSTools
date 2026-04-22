@@ -8,7 +8,6 @@
 
     <Window.Resources>
 
-        <!-- Style des boutons d'action dans la sidebar -->
         <Style x:Key="ActionButton" TargetType="Button">
             <Setter Property="Background" Value="#313244"/>
             <Setter Property="Foreground" Value="#CDD6F4"/>
@@ -46,7 +45,6 @@
             </Setter>
         </Style>
 
-        <!-- Style du bouton Effacer le log -->
         <Style x:Key="ClearButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#6C7086"/>
@@ -70,6 +68,65 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="#313244"/>
+                                <Setter Property="Foreground" Value="#CDD6F4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CancelButton" TargetType="Button">
+            <Setter Property="Background" Value="#F38BA8"/>
+            <Setter Property="Foreground" Value="#1E1E2E"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#EBA0B5"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#D97090"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#A6ADC8"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#45475A"/>
                                 <Setter Property="Foreground" Value="#CDD6F4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -113,11 +170,36 @@
                 <!-- Separateur -->
                 <Border DockPanel.Dock="Top" Height="1" Background="#313244" Margin="16,0"/>
 
-                <!-- Pied de page -->
+                <!-- Pied de page avec dossier de sortie -->
                 <Border DockPanel.Dock="Bottom" Padding="16,12">
-                    <TextBlock Text="v2.0"
-                               FontFamily="Segoe UI" FontSize="11"
-                               Foreground="#585B70" HorizontalAlignment="Center"/>
+                    <StackPanel>
+                        <TextBlock Text="DOSSIER DE SORTIE"
+                                   FontFamily="Segoe UI" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="#585B70" Margin="0,0,0,6"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="OutputDirText"
+                                       Grid.Column="0"
+                                       Text="./Output"
+                                       FontFamily="Segoe UI" FontSize="10"
+                                       Foreground="#6C7086"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
+                            <Button x:Name="BtnOutputDir"
+                                    Grid.Column="1"
+                                    Content="Changer"
+                                    Style="{StaticResource SmallButton}"
+                                    Margin="8,0,0,0"/>
+                        </Grid>
+                        <TextBlock Text="v3.0 — Fork by Vincent"
+                                   FontFamily="Segoe UI" FontSize="10"
+                                   Foreground="#45475A"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,10,0,0"/>
+                    </StackPanel>
                 </Border>
 
                 <!-- Boutons d'action -->
@@ -195,26 +277,29 @@
                             DockPanel.Dock="Right"
                             Content="Effacer"
                             Style="{StaticResource ClearButton}"/>
+                    <Button x:Name="BtnCancel"
+                            DockPanel.Dock="Right"
+                            Content="Annuler"
+                            Style="{StaticResource CancelButton}"
+                            Visibility="Collapsed"
+                            Margin="0,0,8,0"/>
                     <TextBlock Text="Journal d'activite"
                                FontFamily="Segoe UI" FontSize="16" FontWeight="SemiBold"
                                Foreground="#CDD6F4" VerticalAlignment="Center"/>
                 </DockPanel>
             </Border>
 
-            <!-- Zone de log -->
+            <!-- Zone de log (RichTextBox pour couleurs) -->
             <Border Grid.Row="1" Margin="20,0,20,12" CornerRadius="8" Background="#11111B">
-                <TextBox x:Name="LogOutput"
-                         IsReadOnly="True"
-                         TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto"
-                         Background="Transparent"
-                         Foreground="#CDD6F4"
-                         CaretBrush="Transparent"
-                         FontFamily="Cascadia Code,Consolas,Courier New"
-                         FontSize="12"
-                         Padding="16"
-                         BorderThickness="0"
-                         AcceptsReturn="True"/>
+                <RichTextBox x:Name="LogOutput"
+                             IsReadOnly="True"
+                             Background="Transparent"
+                             Foreground="#CDD6F4"
+                             CaretBrush="Transparent"
+                             FontFamily="Cascadia Code,Consolas,Courier New"
+                             FontSize="12"
+                             BorderThickness="0"
+                             VerticalScrollBarVisibility="Auto"/>
             </Border>
 
             <!-- Barre de statut -->
@@ -232,7 +317,8 @@
 
                     <ProgressBar x:Name="ProgressBar"
                                  Grid.Column="1"
-                                 Width="200" Height="3"
+                                 Width="200" Height="4"
+                                 Minimum="0" Maximum="100" Value="0"
                                  IsIndeterminate="False"
                                  Background="#313244"
                                  Foreground="#89B4FA"
