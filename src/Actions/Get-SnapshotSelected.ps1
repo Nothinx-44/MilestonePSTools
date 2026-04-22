@@ -13,7 +13,10 @@ function Get-SnapshotSelected {
         [scriptblock]$Log,
 
         [Parameter()]
-        [scriptblock]$Cancel = { $false }
+        [scriptblock]$Cancel = { $false },
+
+        [Parameter()]
+        [nullable[datetime]]$SnapshotTime = $null
     )
 
     & $Log "Ouverture du selecteur de camera..."
@@ -31,16 +34,29 @@ function Get-SnapshotSelected {
         New-Item -Path $snapshotDir -ItemType Directory -Force | Out-Null
     }
 
+    if ($SnapshotTime) {
+        & $Log "Mode historique : $($SnapshotTime.ToString('dd/MM/yyyy HH:mm'))"
+    }
     & $Log "Capture du snapshot de '$($camera.Name)'..."
 
     try {
-        $camera | Get-Snapshot `
-            -UseFriendlyName `
-            -Behavior GetEnd `
-            -Quality $Config.snapshotQuality `
-            -Save `
-            -Path $snapshotDir
-
+        if ($SnapshotTime) {
+            $camera | Get-Snapshot `
+                -UseFriendlyName `
+                -Behavior GetNearest `
+                -Time $SnapshotTime `
+                -Quality $Config.snapshotQuality `
+                -Save `
+                -Path $snapshotDir
+        }
+        else {
+            $camera | Get-Snapshot `
+                -UseFriendlyName `
+                -Behavior GetEnd `
+                -Quality $Config.snapshotQuality `
+                -Save `
+                -Path $snapshotDir
+        }
         & $Log "Snapshot enregistre dans : $snapshotDir"
     }
     catch {

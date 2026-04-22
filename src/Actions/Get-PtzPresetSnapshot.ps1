@@ -16,7 +16,10 @@ function Get-PtzPresetSnapshot {
         [scriptblock]$Cancel = { $false },
 
         [Parameter()]
-        [scriptblock]$ReportProgress = {}
+        [scriptblock]$ReportProgress = {},
+
+        [Parameter()]
+        [nullable[datetime]]$SnapshotTime = $null
     )
 
     $outputDir = Join-Path $Config.outputDirectory 'PTZ_Snapshots'
@@ -39,6 +42,10 @@ function Get-PtzPresetSnapshot {
     $cameraList  = @($cameras)
     $totalCams   = $cameraList.Count
     & $Log "$totalCams camera(s) PTZ avec presets trouvee(s)."
+
+    if ($SnapshotTime) {
+        & $Log "Mode historique : $($SnapshotTime.ToString('dd/MM/yyyy HH:mm'))"
+    }
 
     # Compter le total de presets pour la barre de progression
     $totalPresets = ($cameraList | ForEach-Object { $_.PtzPresetFolder.PtzPresets.Count } | Measure-Object -Sum).Sum
@@ -73,12 +80,18 @@ function Get-PtzPresetSnapshot {
 
             & $Log "  Capture du snapshot..."
             try {
-                $camera | Get-Snapshot `
-                    -Quality  $Config.snapshotQuality `
-                    -Save     $true `
-                    -Path     $outputDir `
-                    -FileName "$($camera.Name) -- $($ptzPreset.Name).jpg" `
-                    -Behavior GetEnd
+                $snapParams = @{
+                    Quality  = $Config.snapshotQuality
+                    Save     = $true
+                    Path     = $outputDir
+                    FileName = "$($camera.Name) -- $($ptzPreset.Name).jpg"
+                }
+                if ($SnapshotTime) {
+                    $camera | Get-Snapshot @snapParams -Behavior GetNearest -Time $SnapshotTime
+                }
+                else {
+                    $camera | Get-Snapshot @snapParams -Behavior GetEnd
+                }
                 & $Log "  Snapshot '$($ptzPreset.Name)' enregistre."
             }
             catch {

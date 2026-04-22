@@ -107,6 +107,95 @@
             </Setter>
         </Style>
 
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground"   Value="#CDD6F4"/>
+            <Setter Property="Background"   Value="#313244"/>
+            <Setter Property="BorderBrush"  Value="#45475A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"      Value="8,6"/>
+            <Setter Property="FontFamily"   Value="Segoe UI"/>
+            <Setter Property="FontSize"     Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="toggleButton"
+                                          Grid.ColumnSpan="2"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay,
+                                                      RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="bd"
+                                                Background="{Binding Background, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <TextBlock Text="▾" Foreground="#6C7086" FontSize="10"
+                                                       HorizontalAlignment="Right"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,10,0"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bd" Property="Background"  Value="#45475A"/>
+                                                <Setter TargetName="bd" Property="BorderBrush" Value="#6C7086"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="bd" Property="Background" Value="#45475A"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"
+                                              IsHitTestVisible="False"/>
+                            <Popup x:Name="PART_Popup"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True">
+                                <Border Background="#2A2A3E"
+                                        BorderBrush="#45475A"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Margin="0,2,0,0">
+                                    <ItemsPresenter/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Resources>
+                <Style TargetType="ComboBoxItem">
+                    <Setter Property="Foreground" Value="#CDD6F4"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Padding"    Value="10,8"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ComboBoxItem">
+                                <Border x:Name="bd"
+                                        Background="{TemplateBinding Background}"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#45475A"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="#585B70"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Style.Resources>
+        </Style>
+
         <Style x:Key="SmallButton" TargetType="Button">
             <Setter Property="Background" Value="#313244"/>
             <Setter Property="Foreground" Value="#A6ADC8"/>
@@ -194,7 +283,7 @@
                                     Style="{StaticResource SmallButton}"
                                     Margin="8,0,0,0"/>
                         </Grid>
-                        <TextBlock Text="v3.0 — Fork by Vincent"
+                        <TextBlock Text="v4.0 — Fork by Vincent"
                                    FontFamily="Segoe UI" FontSize="10"
                                    Foreground="#45475A"
                                    HorizontalAlignment="Center"
@@ -205,6 +294,58 @@
                 <!-- Boutons d'action -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
                     <StackPanel>
+
+                        <!-- Categorie : Mode capture -->
+                        <TextBlock Text="MODE CAPTURE"
+                                   FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="#CBA6F7" Margin="20,12,0,4"/>
+
+                        <ComboBox x:Name="SnapshotMode"
+                                  Margin="8,2,8,0"
+                                  Style="{StaticResource DarkComboBox}">
+                            <ComboBoxItem Content="Live (derniere image)" IsSelected="True"/>
+                            <ComboBoxItem Content="Image historique"/>
+                        </ComboBox>
+
+                        <!-- Panneau date / heure (affiche uniquement en mode historique) -->
+                        <Border x:Name="DateTimePanel"
+                                Margin="8,6,8,4"
+                                Background="#1E1E2E"
+                                CornerRadius="6"
+                                Padding="12,10"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="Date"
+                                           FontFamily="Segoe UI" FontSize="10"
+                                           Foreground="#585B70" Margin="0,0,0,4"/>
+                                <DatePicker x:Name="SnapshotDate"
+                                            FontFamily="Segoe UI" FontSize="12"
+                                            Background="#313244"
+                                            Foreground="#1E1E2E"
+                                            BorderBrush="#45475A"/>
+                                <TextBlock Text="Heure (HH : mm)"
+                                           FontFamily="Segoe UI" FontSize="10"
+                                           Foreground="#585B70" Margin="0,10,0,4"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox x:Name="SnapshotHour"
+                                             Text="14" Width="46"
+                                             Background="#313244" Foreground="#CDD6F4"
+                                             BorderBrush="#45475A" BorderThickness="1"
+                                             FontFamily="Segoe UI" FontSize="14"
+                                             TextAlignment="Center" Padding="4,5"/>
+                                    <TextBlock Text=" : "
+                                               VerticalAlignment="Center"
+                                               Foreground="#6C7086" FontSize="18"
+                                               Margin="2,0"/>
+                                    <TextBox x:Name="SnapshotMinute"
+                                             Text="59" Width="46"
+                                             Background="#313244" Foreground="#CDD6F4"
+                                             BorderBrush="#45475A" BorderThickness="1"
+                                             FontFamily="Segoe UI" FontSize="14"
+                                             TextAlignment="Center" Padding="4,5"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
 
                         <!-- Categorie : Snapshots -->
                         <TextBlock Text="SNAPSHOTS"
@@ -253,6 +394,27 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#x25B8;" Foreground="#A6E3A1" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Grouper par Modele"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Categorie : Diagnostic -->
+                        <TextBlock Text="DIAGNOSTIC"
+                                   FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="#FAB387" Margin="20,20,0,4"/>
+
+                        <Button x:Name="BtnRecordingStats"
+                                Style="{StaticResource ActionButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x25B8;" Foreground="#FAB387" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Stats Enregistrement (7j)"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="BtnLicenseInfo"
+                                Style="{StaticResource ActionButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x25B8;" Foreground="#FAB387" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Informations Licence"/>
                             </StackPanel>
                         </Button>
 

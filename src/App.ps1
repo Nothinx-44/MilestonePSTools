@@ -58,6 +58,8 @@ $script:Config = @{
 . (Join-Path $SrcPath 'Actions/Export-HardwareReport.ps1')
 . (Join-Path $SrcPath 'Actions/Set-CameraGroupByModel.ps1')
 . (Join-Path $SrcPath 'Actions/Get-PtzPresetSnapshot.ps1')
+. (Join-Path $SrcPath 'Actions/Get-RecordingStats.ps1')
+. (Join-Path $SrcPath 'Actions/Get-LicenseInfo.ps1')
 
 # ============================================================
 # 3. INITIALISATION DES MODULES ET CONNEXION
@@ -123,9 +125,16 @@ $script:BtnSnapshotAll      = $Window.FindName('BtnSnapshotAll')
 $script:BtnPtzSnapshot      = $Window.FindName('BtnPtzSnapshot')
 $script:BtnExportHardware   = $Window.FindName('BtnExportHardware')
 $script:BtnGroupByModel     = $Window.FindName('BtnGroupByModel')
+$script:BtnRecordingStats   = $Window.FindName('BtnRecordingStats')
+$script:BtnLicenseInfo      = $Window.FindName('BtnLicenseInfo')
 $script:BtnClearLog         = $Window.FindName('BtnClearLog')
 $script:BtnCancel           = $Window.FindName('BtnCancel')
 $script:BtnOutputDir        = $Window.FindName('BtnOutputDir')
+$script:SnapshotMode        = $Window.FindName('SnapshotMode')
+$script:DateTimePanel       = $Window.FindName('DateTimePanel')
+$script:SnapshotDate        = $Window.FindName('SnapshotDate')
+$script:SnapshotHour        = $Window.FindName('SnapshotHour')
+$script:SnapshotMinute      = $Window.FindName('SnapshotMinute')
 
 # Initialiser le document RichTextBox (supprimer le paragraphe vide par defaut)
 $script:LogOutput.Document.Blocks.Clear()
@@ -138,6 +147,9 @@ $script:StatusText.Text      = 'Connecte'
 # Dossier de sortie dans la sidebar
 $script:OutputDirText.Text   = $script:Config.outputDirectory
 
+# Date par defaut = hier (cas d'usage le plus courant)
+$script:SnapshotDate.SelectedDate = [datetime]::Today.AddDays(-1)
+
 # ============================================================
 # 7. ETAT PARTAGE POUR CANCEL ET PROGRESS
 # ============================================================
@@ -146,6 +158,32 @@ $script:CancelRequested = $false
 
 # Callbacks passes aux actions
 $script:IsCancelled = { $script:CancelRequested }
+
+# Retourne $null en mode live, un [datetime] en mode historique, $false si validation echoue
+function Get-SnapshotDateTime {
+    if ($script:SnapshotMode.SelectedIndex -eq 0) { return $null }
+
+    $date = $script:SnapshotDate.SelectedDate
+    if (-not $date) {
+        [System.Windows.MessageBox]::Show(
+            "Veuillez selectionner une date.", 'Date manquante', 'OK', 'Warning') | Out-Null
+        return $false
+    }
+
+    $h = 0; $m = 0
+    if (-not [int]::TryParse($script:SnapshotHour.Text,   [ref]$h) -or $h -lt 0 -or $h -gt 23) {
+        [System.Windows.MessageBox]::Show(
+            "Heure invalide. Entrez une valeur entre 0 et 23.", 'Heure invalide', 'OK', 'Warning') | Out-Null
+        return $false
+    }
+    if (-not [int]::TryParse($script:SnapshotMinute.Text, [ref]$m) -or $m -lt 0 -or $m -gt 59) {
+        [System.Windows.MessageBox]::Show(
+            "Minutes invalides. Entrez une valeur entre 0 et 59.", 'Minutes invalides', 'OK', 'Warning') | Out-Null
+        return $false
+    }
+
+    return $date.Date.AddHours($h).AddMinutes($m)
+}
 
 $script:ReportProgress = {
     param([int]$Current, [int]$Total)
@@ -199,7 +237,8 @@ function Write-UILog {
 
 $script:ActionButtons = @(
     $BtnSnapshotSelected, $BtnSnapshotAll, $BtnPtzSnapshot,
-    $BtnExportHardware, $BtnGroupByModel
+    $BtnExportHardware, $BtnGroupByModel,
+    $BtnRecordingStats, $BtnLicenseInfo
 )
 
 function Set-UIBusy {
@@ -263,30 +302,44 @@ $logCallback = {
     Write-UILog -Message $Message -Level $level
 }
 
+$script:SnapshotMode.Add_SelectionChanged({
+    $vis = if ($script:SnapshotMode.SelectedIndex -eq 1) { 'Visible' } else { 'Collapsed' }
+    $script:DateTimePanel.Visibility = $vis
+})
+
 $BtnSnapshotSelected.Add_Click({
+    $script:SnapshotTime = Get-SnapshotDateTime
+    if ($script:SnapshotTime -eq $false) { return }
     Invoke-Action -Name 'Snapshot - Selection' -Action {
         Get-SnapshotSelected -Config $script:Config -Log $logCallback `
-            -Cancel $script:IsCancelled
+            -Cancel $script:IsCancelled -SnapshotTime $script:SnapshotTime
     }
 })
 
 $BtnSnapshotAll.Add_Click({
+    $script:SnapshotTime = Get-SnapshotDateTime
+    if ($script:SnapshotTime -eq $false) { return }
     Invoke-Action -Name 'Snapshot - Toutes les cameras' -Action {
         Get-SnapshotAll -Config $script:Config -Log $logCallback `
-            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress `
+            -SnapshotTime $script:SnapshotTime
     }
 })
 
 $BtnPtzSnapshot.Add_Click({
+    $script:SnapshotTime = Get-SnapshotDateTime
+    if ($script:SnapshotTime -eq $false) { return }
     Invoke-Action -Name 'Snapshot - Presets PTZ' -Action {
         Get-PtzPresetSnapshot -Config $script:Config -Log $logCallback `
-            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress `
+            -SnapshotTime $script:SnapshotTime
     }
 })
 
 $BtnExportHardware.Add_Click({
     Invoke-Action -Name 'Export Hardware' -Action {
-        Export-HardwareReport -Config $script:Config -Log $logCallback
+        Export-HardwareReport -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
@@ -294,6 +347,19 @@ $BtnGroupByModel.Add_Click({
     Invoke-Action -Name 'Grouper par Modele' -Action {
         Set-CameraGroupByModel -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
+    }
+})
+
+$BtnRecordingStats.Add_Click({
+    Invoke-Action -Name 'Stats Enregistrement (7 jours)' -Action {
+        Get-RecordingStats -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
+    }
+})
+
+$BtnLicenseInfo.Add_Click({
+    Invoke-Action -Name 'Informations Licence' -Action {
+        Get-VmsLicenseSummary -Log $logCallback
     }
 })
 

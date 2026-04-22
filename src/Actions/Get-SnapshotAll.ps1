@@ -16,7 +16,10 @@ function Get-SnapshotAll {
         [scriptblock]$Cancel = { $false },
 
         [Parameter()]
-        [scriptblock]$ReportProgress = {}
+        [scriptblock]$ReportProgress = {},
+
+        [Parameter()]
+        [nullable[datetime]]$SnapshotTime = $null
     )
 
     $snapshotDir = Join-Path $Config.outputDirectory 'Snapshots'
@@ -28,6 +31,10 @@ function Get-SnapshotAll {
     $cameras = Get-VmsCamera
     $total   = @($cameras).Count
     & $Log "$total cameras trouvees. Capture en cours..."
+
+    if ($SnapshotTime) {
+        & $Log "Mode historique : $($SnapshotTime.ToString('dd/MM/yyyy HH:mm'))"
+    }
 
     $count = 0
     foreach ($cam in $cameras) {
@@ -41,12 +48,23 @@ function Get-SnapshotAll {
         & $Log "[$count/$total] Snapshot de '$($cam.Name)'..."
 
         try {
-            $cam | Get-Snapshot `
-                -UseFriendlyName `
-                -Behavior GetEnd `
-                -Quality $Config.snapshotQuality `
-                -Save `
-                -Path $snapshotDir
+            if ($SnapshotTime) {
+                $cam | Get-Snapshot `
+                    -UseFriendlyName `
+                    -Behavior GetNearest `
+                    -Time $SnapshotTime `
+                    -Quality $Config.snapshotQuality `
+                    -Save `
+                    -Path $snapshotDir
+            }
+            else {
+                $cam | Get-Snapshot `
+                    -UseFriendlyName `
+                    -Behavior GetEnd `
+                    -Quality $Config.snapshotQuality `
+                    -Save `
+                    -Path $snapshotDir
+            }
         }
         catch {
             & $Log "ERREUR sur '$($cam.Name)': $_"
