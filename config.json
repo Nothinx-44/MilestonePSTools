@@ -1,5 +1,4 @@
 {
-    "installMode": "Auto",
     "outputDirectory": "./Output",
     "snapshotQuality": 95,
     "csvDelimiter": ";",

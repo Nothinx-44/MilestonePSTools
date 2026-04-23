@@ -22,7 +22,6 @@ if (Test-Path $configPath) {
 else {
     Write-Warning "Fichier config.json introuvable. Utilisation des valeurs par defaut."
     $configRaw = [PSCustomObject]@{
-        installMode     = 'Auto'
         outputDirectory = './Output'
         snapshotQuality = 95
         csvDelimiter    = ';'
@@ -65,15 +64,12 @@ $script:Config = @{
 # 3. INITIALISATION DES MODULES ET CONNEXION
 # ============================================================
 
-$installMode = $configRaw.installMode
-if (-not $installMode -or $installMode -eq 'Auto') {
-    if (Test-Path $DependenciesPath) {
-        $installMode = 'Offline'
-        Write-Host 'Mode Offline detecte (dossier Dependencies/ present).' -ForegroundColor Yellow
-    }
-    else {
-        $installMode = 'Online'
-    }
+if (Test-Path $DependenciesPath) {
+    $installMode = 'Offline'
+    Write-Host 'Mode Offline detecte (dossier Dependencies/ present).' -ForegroundColor Yellow
+}
+else {
+    $installMode = 'Online'
 }
 
 $initLog = { param($Message) Write-Host $Message }

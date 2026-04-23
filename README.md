@@ -1,24 +1,6 @@
-# Milestone Toolkit
+# Milestone Toolkit v4.1 — Fork by Vincent
 
 Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
-
-## Fonctionnalites
-
-| Action | Description |
-|--------|-------------|
-| **Snapshot - Selection** | Capture un snapshot d'une camera selectionnee via le dialogue Milestone |
-| **Snapshot - Toutes** | Capture un snapshot de toutes les cameras du VMS |
-| **Snapshot - Presets PTZ** | Parcourt les presets PTZ d'une camera et capture un snapshot a chaque position |
-| **Export Hardware (CSV)** | Genere un rapport CSV de tous les equipements (IP, MAC, firmware, credentials, etc.) |
-| **Grouper par Modele** | Cree des Device Groups dans Milestone organises par modele de camera |
-
-## Prerequis
-
-- Windows 10/11 ou Windows Server 2016+
-- PowerShell 5.1+ (inclus dans Windows) ou PowerShell 7+
-- Acces reseau au serveur Milestone XProtect Management Server
-
-Le module [MilestonePSTools](https://www.powershellgallery.com/packages/MilestonePSTools) est installe automatiquement au premier lancement (mode Online).
 
 ## Lancement
 
@@ -28,45 +10,67 @@ Le module [MilestonePSTools](https://www.powershellgallery.com/packages/Mileston
 
 Ou clic-droit sur `Launch.ps1` > **Executer avec PowerShell**.
 
-## Installation des dependances
+---
 
-L'application supporte deux modes d'installation :
+## Fonctionnalites
 
-### Mode Online (par defaut)
+### Snapshots
 
-Si la machine a acces a Internet, le module MilestonePSTools est telecharge et installe automatiquement depuis PowerShell Gallery au premier lancement. Aucune action requise.
-
-### Mode Offline (machine isolee)
-
-Pour deployer sur une machine sans acces Internet :
-
-1. Sur une machine **avec** Internet, executez :
-   ```powershell
-   .\Save-Dependencies.ps1
-   ```
-   Cela telecharge le module dans le dossier `Dependencies/`.
-
-2. Copiez le **projet entier** (avec `Dependencies/`) sur la machine cible.
-
-3. Lancez normalement — le mode Offline est detecte automatiquement grace a la presence du dossier `Dependencies/`.
-
-### Configuration du mode
-
-Dans `config.json`, le parametre `installMode` accepte :
-
-| Valeur | Comportement |
+| Action | Description |
 |--------|-------------|
-| `Auto` | Utilise `Dependencies/` si present, sinon telecharge en ligne *(defaut)* |
-| `Online` | Force le telechargement depuis PSGallery |
-| `Offline` | Force le chargement local (erreur si module absent) |
+| **Snapshot - Selection** | Capture un snapshot de la camera selectionnee via le dialogue Milestone |
+| **Snapshot - Toutes les cameras** | Capture un snapshot de toutes les cameras en parallele (jusqu'a 12 simultanees) |
+| **Snapshot - Presets PTZ** | Parcourt les presets PTZ et capture un snapshot a chaque position |
+
+Toutes les actions snapshot supportent deux modes :
+- **Live** : derniere image disponible
+- **Historique** : image la plus proche d'une date/heure choisie
+
+### Gestion
+
+| Action | Description |
+|--------|-------------|
+| **Export Hardware** | Rapport Excel de tous les equipements (IP, MAC, firmware, identifiants). Option : snapshot integre par camera, recuperes en parallele |
+| **Grouper par Modele** | Cree des groupes de cameras dans Milestone organises par modele |
+
+### Diagnostic
+
+| Action | Description |
+|--------|-------------|
+| **Stats Enregistrement (7j)** | Statistiques d'enregistrement et de mouvement par camera sur 7 jours (CSV) |
+| **Informations Licence** | Affiche les produits licencies, dates d'expiration et canaux utilises |
+
+---
+
+## Prerequis
+
+- Windows 10/11 ou Windows Server 2016+
+- PowerShell 5.1 (inclus dans Windows)
+- Excel installe sur le poste (pour l'export Hardware avec snapshots)
+- Acces reseau au serveur Milestone XProtect Management Server
+
+Le module **MilestonePSTools** est installe automatiquement au premier lancement si Internet est disponible.
+
+---
+
+## Modes d'installation
+
+### Online (par defaut)
+Le module est telecharge automatiquement depuis PowerShell Gallery. Aucune action requise.
+
+### Offline (machine sans Internet)
+1. Sur une machine **avec** Internet, cliquer **Preparer offline** dans l'ecran de demarrage
+2. Copier le projet entier (avec `Dependencies/`) sur la machine cible
+3. Lancer normalement — le mode Offline est detecte automatiquement
+
+---
 
 ## Configuration
 
-Modifier `config.json` pour personnaliser le comportement :
+Modifier `config.json` :
 
 ```json
 {
-    "installMode": "Auto",
     "outputDirectory": "./Output",
     "snapshotQuality": 95,
     "csvDelimiter": ";",
@@ -76,60 +80,41 @@ Modifier `config.json` pour personnaliser le comportement :
 
 | Parametre | Description | Defaut |
 |-----------|-------------|--------|
-| `installMode` | Mode d'installation des modules : `Auto`, `Online`, `Offline` | `Auto` |
-| `outputDirectory` | Repertoire de sortie (snapshots, CSV, etc.) | `./Output` |
+| `outputDirectory` | Dossier de sortie par defaut (snapshots, Excel, CSV) | `./Output` |
 | `snapshotQuality` | Qualite JPEG des snapshots (1-100) | `95` |
-| `csvDelimiter` | Separateur pour l'export CSV | `;` |
-| `csvEncoding` | Encodage du fichier CSV | `UTF8` |
+| `csvDelimiter` | Separateur des fichiers CSV | `;` |
+| `csvEncoding` | Encodage des fichiers CSV | `UTF8` |
+
+Le dossier de sortie peut aussi etre change en cours d'utilisation via le bouton **Changer** dans la sidebar.
+
+Le mode Online/Offline est detecte automatiquement selon la presence du dossier `Dependencies/`.
+
+---
 
 ## Structure du projet
 
 ```
 MilestonePSTools/
 ├── Launch.ps1                  # Point d'entree
-├── Save-Dependencies.ps1       # Telecharge les modules pour usage offline
-├── config.json                 # Configuration utilisateur
-├── Dependencies/               # Modules offline (genere par Save-Dependencies.ps1)
-├── src/
-│   ├── App.ps1                 # Bootstrap, chargement UI, wiring evenements
-│   ├── UI/
-│   │   └── MainWindow.xaml     # Interface WPF (theme sombre)
-│   ├── Actions/                # 1 fichier = 1 action
-│   │   ├── Get-SnapshotSelected.ps1
-│   │   ├── Get-SnapshotAll.ps1
-│   │   ├── Export-HardwareReport.ps1
-│   │   ├── Set-CameraGroupByModel.ps1
-│   │   └── Get-PtzPresetSnapshot.ps1
-│   └── Core/                   # Utilitaires partages
-│       ├── Initialize-Modules.ps1
-│       ├── Write-ActivityLog.ps1
-│       └── Invoke-PtzPreset.ps1
-├── Logs/                       # Logs d'activite (generes automatiquement)
-├── Output/                     # Fichiers de sortie (generes automatiquement)
-└── Old/                        # Script original archive
+├── config.json                 # Configuration
+├── Dependencies/               # Modules offline (optionnel)
+├── Logs/                       # Logs journaliers (auto)
+├── Output/                     # Fichiers generes (auto)
+└── src/
+    ├── App.ps1                 # Chargement UI et evenements
+    ├── UI/
+    │   └── MainWindow.xaml     # Interface WPF (theme sombre Catppuccin)
+    ├── Actions/
+    │   ├── Get-SnapshotSelected.ps1
+    │   ├── Get-SnapshotAll.ps1
+    │   ├── Get-PtzPresetSnapshot.ps1
+    │   ├── Export-HardwareReport.ps1
+    │   ├── Set-CameraGroupByModel.ps1
+    │   ├── Get-RecordingStats.ps1
+    │   └── Get-LicenseInfo.ps1
+    └── Core/
+        ├── Initialize-Modules.ps1
+        ├── Show-StartupCheck.ps1
+        ├── Write-ActivityLog.ps1
+        └── Invoke-PtzPreset.ps1
 ```
-
-## Ajouter une nouvelle action
-
-1. Creer un fichier dans `src/Actions/` (ex: `New-MyAction.ps1`)
-2. Implementer la fonction avec l'interface standard :
-
-```powershell
-function New-MyAction {
-    param(
-        [hashtable]$Config,
-        [scriptblock]$Log
-    )
-
-    & $Log "Debut de l'action..."
-    # Votre code ici
-    & $Log "Terminee."
-}
-```
-
-3. Dans `src/App.ps1`, ajouter le dot-source et le bouton correspondant
-
-## Logs
-
-Les logs sont ecrits dans le dossier `Logs/` avec un fichier par jour :
-`MilestoneToolkit_2026-02-10.log`
