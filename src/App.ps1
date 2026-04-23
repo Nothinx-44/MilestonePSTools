@@ -59,6 +59,8 @@ $script:Config = @{
 . (Join-Path $SrcPath 'Actions/Get-PtzPresetSnapshot.ps1')
 . (Join-Path $SrcPath 'Actions/Get-RecordingStats.ps1')
 . (Join-Path $SrcPath 'Actions/Get-LicenseInfo.ps1')
+. (Join-Path $SrcPath 'Actions/Get-CameraStatus.ps1')
+. (Join-Path $SrcPath 'Actions/Get-PlaybackReport.ps1')
 
 # ============================================================
 # 3. INITIALISATION DES MODULES ET CONNEXION
@@ -123,6 +125,8 @@ $script:BtnExportHardware   = $Window.FindName('BtnExportHardware')
 $script:BtnGroupByModel     = $Window.FindName('BtnGroupByModel')
 $script:BtnRecordingStats   = $Window.FindName('BtnRecordingStats')
 $script:BtnLicenseInfo      = $Window.FindName('BtnLicenseInfo')
+$script:BtnCameraStatus     = $Window.FindName('BtnCameraStatus')
+$script:BtnPlaybackReport   = $Window.FindName('BtnPlaybackReport')
 $script:BtnClearLog         = $Window.FindName('BtnClearLog')
 $script:BtnCancel           = $Window.FindName('BtnCancel')
 $script:BtnOutputDir        = $Window.FindName('BtnOutputDir')
@@ -234,6 +238,7 @@ function Write-UILog {
 $script:ActionButtons = @(
     $BtnSnapshotSelected, $BtnSnapshotAll, $BtnPtzSnapshot,
     $BtnExportHardware, $BtnGroupByModel,
+    $BtnCameraStatus, $BtnPlaybackReport,
     $BtnRecordingStats, $BtnLicenseInfo
 )
 
@@ -342,6 +347,20 @@ $BtnExportHardware.Add_Click({
 $BtnGroupByModel.Add_Click({
     Invoke-Action -Name 'Grouper par Modele' -Action {
         Set-CameraGroupByModel -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
+    }
+})
+
+$BtnCameraStatus.Add_Click({
+    Invoke-Action -Name 'Etat des cameras' -Action {
+        Get-CameraStatus -Config $script:Config -Log $logCallback `
+            -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
+    }
+})
+
+$BtnPlaybackReport.Add_Click({
+    Invoke-Action -Name 'Dates d enregistrement' -Action {
+        Get-PlaybackReport -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
