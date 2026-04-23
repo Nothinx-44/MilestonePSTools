@@ -283,7 +283,7 @@
                                     Style="{StaticResource SmallButton}"
                                     Margin="8,0,0,0"/>
                         </Grid>
-                        <TextBlock Text="v4.2 — Fork by Vincent"
+                        <TextBlock Text="v4.3 — Fork by Vincent"
                                    FontFamily="Segoe UI" FontSize="10"
                                    Foreground="#45475A"
                                    HorizontalAlignment="Center"
