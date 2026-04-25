@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Core\")",
+      "Bash(mkdir -p \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.App/Services\")",
+      "Bash(mkdir -p \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Modules.Milestone/Services\")",
+      "Bash(mkdir -p \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Modules.Milestone/Views\")",
+      "Bash(mkdir -p \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Modules.Milestone/Scripts/Core\")",
+      "Bash(dotnet build *)",
+      "Bash(dotnet nuget *)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet --list-runtimes)",
+      "Bash(dotnet restore *)",
+      "Bash(dotnet run *)",
+      "Bash(Start-Sleep 8)",
+      "Bash(./MetierHub.exe)",
+      "Bash(echo \"EXIT_CODE:$?\")",
+      "Bash(powershell -Command \"\\(Get-Module MilestonePSTools -ListAvailable | Select-Object -First 1\\).ModuleBase\")",
+      "Bash(powershell -Command \"\\(Get-ChildItem 'C:\\\\Users\\\\Vincent\\\\Documents\\\\WindowsPowerShell\\\\Modules\\\\MilestonePSTools\\\\25.2.38' -Recurse | Measure-Object -Property Length -Sum\\).Sum / 1MB\")",
+      "Bash(powershell -Command ' *)",
+      "Bash(taskkill /F /IM MetierHub.exe)",
+      "PowerShell(Stop-Process -Name \"MetierHub\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(dotnet publish *)",
+      "Read(//c/Users/Vincent/AppData/Local/Temp/**)",
+      "Read(//c/Windows/Temp/**)",
+      "PowerShell(Get-ChildItem \"$env:TEMP\" -Recurse -Filter \"MetierHub_init.log\" -ErrorAction SilentlyContinue | Select-Object FullName; Get-Content \"$env:TEMP\\\\MetierHub_init.log\" -ErrorAction SilentlyContinue)",
+      "PowerShell($p = Start-Process \"C:\\\\Users\\\\Vincent\\\\Downloads\\\\MetierHub\\\\publish\\\\MetierHub.exe\" -PassThru; Start-Sleep 6; $alive = -not $p.HasExited; if\\(-not $p.HasExited\\){$p.Kill\\(\\)}; Write-Host \"ALIVE=$alive\")",
+      "Bash(cp -r \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Core/\"*.cs \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.App/Core/\")",
+      "Bash(cp \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Core/\"*.cs \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.App/Core/\")",
+      "Bash(cp \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Modules.Milestone/Services/\"*.cs \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.App/Milestone/Services/\")",
+      "Bash(cp \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Modules.Milestone/Views/\"*.cs \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.App/Milestone/Views/\")",
+      "Bash(cp \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.Modules.Milestone/Views/\"*.xaml \"c:/Users/Vincent/Downloads/MetierHub/src/MetierHub.App/Milestone/Views/\")",
+      "Bash(powershell -Command \"Get-Help Connect-ManagementServer -Full 2>&1 | Select-String -Pattern 'PARAM|Syntax|Example|ServerAddress|Credential|Basic|Windows|Token|SecurOnly' | head -40\")",
+      "Bash(powershell -Command '\\(Get-Command Connect-ManagementServer\\).ParameterSets | ForEach-Object { Write-Host \\('\\\\''--- '\\\\'' + $_.Name\\); $_.Parameters | ForEach-Object { Write-Host $_.Name } }')",
+      "Bash(powershell -Command \"\\(Get-Command Connect-ManagementServer\\).Parameters.BasicUser | Format-List *\")",
+      "Bash(powershell -Command \"Unblock-File -Path 'C:\\\\Users\\\\Vincent\\\\Downloads\\\\MetierHub\\\\publish\\\\MetierHub.exe'; Write-Host 'Zone identifier supprime'\")",
+      "PowerShell(Set-ExecutionPolicy Bypass -Scope Process -Force)",
+      "PowerShell(& \"C:\\\\Users\\\\Vincent\\\\Downloads\\\\MetierHub\\\\Sign-And-Trust.ps1\" 2>&1)",
+      "Bash(git add *)"
+    ]
+  }
+}
