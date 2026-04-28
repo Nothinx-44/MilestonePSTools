@@ -1,6 +1,7 @@
 # Milestone Toolkit v4.4 — Fork by Vincent
 
 Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
+<img width="1244" height="864" alt="image" src="https://github.com/user-attachments/assets/909442eb-a8ec-4d50-b90f-e99df0070a9c" />
 
 ## Lancement
 
@@ -31,6 +32,8 @@ Toutes les actions snapshot supportent deux modes :
 | Action | Description |
 |--------|-------------|
 | **Export Hardware** | Rapport Excel configurable : fenetre de selection des colonnes a inclure (hardware, flux video, retention, snapshot). Les mots de passe sont exclus par defaut et ne s'affichent que si la colonne est explicitement cochee. |
+<img width="513" height="556" alt="image" src="https://github.com/user-attachments/assets/d8bb88fe-1b12-4ec0-b948-c56892808e2f" />
+
 | **Grouper par Modele** | Cree des groupes de cameras dans Milestone organises par modele |
 
 ### Monitoring
@@ -69,6 +72,7 @@ Le module est telecharge automatiquement depuis PowerShell Gallery. Aucune actio
 1. Sur une machine **avec** Internet, cliquer **Preparer offline** dans l'ecran de demarrage
 2. Copier le projet entier (avec `Dependencies/`) sur la machine cible
 3. Lancer normalement — le mode Offline est detecte automatiquement
+<img width="559" height="515" alt="image" src="https://github.com/user-attachments/assets/43cd7c30-020b-4fba-a45a-e524bd20feec" />
 
 ---
 
