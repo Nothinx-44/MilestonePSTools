@@ -1,3 +1,21 @@
+# Outil d’export XProtect vers Excel (GUI MilestonePSTools)
+
+Outil avec interface graphique permettant d’exporter les caméras, le hardware, la rétention et les données d’enregistrement depuis Milestone XProtect vers Excel ou CSV, en s’appuyant sur le module PowerShell MilestonePSTools.
+
+## Pourquoi cet outil
+
+Milestone XProtect ne propose pas simplement :
+- l’export complet des caméras vers Excel
+- l’audit de la rétention d’enregistrement
+- la génération de rapports exploitables
+
+Cet outil permet de :
+- gagner du temps sur les grosses installations
+- générer des rapports clairs pour les clients
+- auditer rapidement un système de vidéosurveillance
+
+---
+
 # Milestone Toolkit v4.4 — Fork by Vincent
 
 Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
@@ -49,6 +67,15 @@ Toutes les actions snapshot supportent deux modes :
 |--------|-------------|
 | **Stats Enregistrement (7j)** | Statistiques d'enregistrement et de mouvement par camera sur 7 jours (CSV) |
 | **Informations Licence** | Affiche les produits licencies, dates d'expiration et canaux utilises |
+
+---
+
+## Comment exporter toutes les caméras XProtect vers Excel
+
+1. Lancer l’outil
+2. Cliquer sur **Export Hardware**
+3. Sélectionner les colonnes souhaitées
+4. Exporter vers Excel
 
 ---
 
@@ -131,3 +158,24 @@ MilestonePSTools/
         ├── Write-ActivityLog.ps1
         └── Invoke-PtzPreset.ps1
 ```
+
+---
+
+## Cas d’usage
+
+- Audit de parc caméras
+- Vérification de la rétention
+- Export client
+- Analyse de fonctionnement
+- Maintenance système
+
+---
+
+## Mots-clés
+
+Milestone XProtect export Excel  
+export caméras XProtect  
+outil audit vidéosurveillance  
+MilestonePSTools GUI  
+rapport caméras sécurité  
+export hardware XProtect  
