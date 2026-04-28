@@ -1,7 +1,6 @@
-# Milestone Toolkit v4.3 — Fork by Vincent
+# Milestone Toolkit v4.4 — Fork by Vincent
 
 Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
-<img width="1283" height="862" alt="image" src="https://github.com/user-attachments/assets/26596276-cdee-4b83-a9c6-a97c2439b19d" />
 
 ## Lancement
 
@@ -31,9 +30,7 @@ Toutes les actions snapshot supportent deux modes :
 
 | Action | Description |
 |--------|-------------|
-| **Export Hardware** | Rapport Excel de tous les equipements (IP, MAC, firmware, identifiants). Option : snapshot integre par camera, recuperes en parallele |
-<img width="504" height="549" alt="image" src="https://github.com/user-attachments/assets/bbb9d46c-d6cf-451e-97f4-8bd5b9c2dd54" />
-
+| **Export Hardware** | Rapport Excel configurable : fenetre de selection des colonnes a inclure (hardware, flux video, retention, snapshot). Les mots de passe sont exclus par defaut et ne s'affichent que si la colonne est explicitement cochee. |
 | **Grouper par Modele** | Cree des groupes de cameras dans Milestone organises par modele |
 
 ### Monitoring

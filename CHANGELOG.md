@@ -1,5 +1,28 @@
 # Release Notes
 
+## v4.4
+> Export Hardware — selection des colonnes et securite mot de passe
+
+### Ameliorations
+- **Export Hardware — Fenetre de selection des colonnes** : remplacement des dialogues MessageBox par une fenetre WPF avec cases a cocher groupees par categorie (Informations hardware, Flux video, Retention, Options). Seules les colonnes cochees apparaissent dans le fichier Excel.
+- **Export Hardware — Mots de passe exclus par defaut** : la colonne `Mot de passe` est desormais decochee par defaut. Elle doit etre activee explicitement. L'appel `Get-VmsCameraReport -IncludePlainTextPassword` n'est effectue que si la colonne est selectionnee.
+- **Export Hardware — Optimisation des appels API** : `Get-VmsCameraStream` et `Get-PlaybackInfo` ne sont appeles que si les colonnes flux video ou retention sont selectionnees, evitant des requetes inutiles.
+- **Export Hardware — Boutons Tout cocher / Tout decocher** : selection rapide de toutes les colonnes ou remise a zero en un clic.
+- **Export Hardware — Suppression de l'avertissement mot de passe** : la fenetre de confirmation redondante est supprimee, la case `Mot de passe (!)` marquee en orange suffit comme signal d'intention.
+
+---
+
+## v4.3
+> Enrichissement de l'export Hardware
+
+### Ameliorations
+- **Export Hardware — Flux video** : ajout de 7 nouvelles colonnes groupees par couleur dans le fichier Excel : `Codec (Enreg.)`, `Resolution (Enreg.)`, `FPS (Enreg.)`, `Codec (Live)`, `Resolution (Live)`, `FPS (Live)`, `Flux supplementaires`. Si le flux live et le flux enregistre sont identiques, les colonnes Live restent vides pour eviter la redondance.
+- **Export Hardware — Retention disponible** : nouvelle colonne `Retention disponible` indiquant la duree totale d'archive accessible par camera, calculee via `Get-PlaybackInfo`.
+- **Export Hardware — Adresse IP** : suppression automatique du protocole (`http://`) et du port (`:8000`) — seule l'adresse IP pure (4 blocs) est affichee.
+- **En-tetes Excel colores par groupe** : hardware (sable), flux video (bleu marine), retention (vert), snapshot (violet) pour une lecture rapide.
+
+---
+
 ## v4.2
 > Nouvelle categorie Monitoring
 
