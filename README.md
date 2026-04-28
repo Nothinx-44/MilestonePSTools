@@ -32,6 +32,8 @@ Toutes les actions snapshot supportent deux modes :
 | Action | Description |
 |--------|-------------|
 | **Export Hardware** | Rapport Excel de tous les equipements (IP, MAC, firmware, identifiants). Option : snapshot integre par camera, recuperes en parallele |
+<img width="504" height="549" alt="image" src="https://github.com/user-attachments/assets/bbb9d46c-d6cf-451e-97f4-8bd5b9c2dd54" />
+
 | **Grouper par Modele** | Cree des groupes de cameras dans Milestone organises par modele |
 
 ### Monitoring
