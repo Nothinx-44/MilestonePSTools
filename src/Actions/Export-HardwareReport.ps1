@@ -1,130 +1,105 @@
 <#
 .SYNOPSIS
     Exporte un rapport Excel de tous les equipements Milestone.
-    Inclut : infos hardware, flux video (codec/resolution/FPS par stream), retention disponible, snapshot optionnel.
-    L'utilisateur selectionne les colonnes a inclure via une fenetre de choix.
-    Les mots de passe n'apparaissent dans l'export que si la colonne est explicitement cochee.
+    Colonnes selectionnables via une fenetre de choix. Mots de passe exclus par defaut.
 #>
 
 function Show-ExportColumnSelector {
-    $xaml = @'
+    $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Options d'export"
+        Title="$($script:T.EH_DialogTitle)"
         Width="530" SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         Background="#1E1E2E" FontFamily="Segoe UI">
     <StackPanel Margin="20,16,20,20">
 
-        <!-- Titre + boutons de selection rapide -->
         <DockPanel Margin="0,0,0,10">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button x:Name="BtnSelectAll" Content="Tout cocher"
+                <Button x:Name="BtnSelectAll" Content="$($script:T.EH_BtnSelectAll)"
                         Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" BorderThickness="1"
                         FontSize="11" Padding="10,4" Cursor="Hand" Margin="0,0,6,0"/>
-                <Button x:Name="BtnDeselectAll" Content="Tout decocher"
+                <Button x:Name="BtnDeselectAll" Content="$($script:T.EH_BtnDeselAll)"
                         Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" BorderThickness="1"
                         FontSize="11" Padding="10,4" Cursor="Hand"/>
             </StackPanel>
-            <TextBlock Text="Selectionnez les colonnes a inclure dans l'export :"
+            <TextBlock Text="$($script:T.EH_SelectCols)"
                        Foreground="#CDD6F4" FontSize="13" VerticalAlignment="Center"/>
         </DockPanel>
 
-        <!-- Informations hardware -->
         <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6"
                 Padding="14,10" Margin="0,0,0,8">
             <StackPanel>
-                <TextBlock Text="Informations hardware"
+                <TextBlock Text="$($script:T.EH_GrpHardware)"
                            Foreground="#F4D6CD" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
                 <UniformGrid Columns="3">
-                    <CheckBox x:Name="ChkNom"         Content="Nom"              IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFabricant"   Content="Fabricant"        IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkModele"      Content="Modele"           IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkIP"          Content="IP"               IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkMAC"         Content="MAC"              IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFirmware"    Content="Firmware"         IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkServeurRec"  Content="Serveur Enreg."   IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkUtilisateur" Content="Utilisateur"      IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkMotDePasse"  Content="Mot de passe (!)" IsChecked="False"
-                              Foreground="#FAB387" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkNom"         Content="$($script:T.EH_ChkNom)"        IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFabricant"   Content="$($script:T.EH_ChkFabricant)"  IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkModele"      Content="$($script:T.EH_ChkModele)"     IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkIP"          Content="$($script:T.EH_ChkIP)"         IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkMAC"         Content="$($script:T.EH_ChkMAC)"        IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFirmware"    Content="$($script:T.EH_ChkFirmware)"   IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkServeurRec"  Content="$($script:T.EH_ChkServeurRec)" IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkUtilisateur" Content="$($script:T.EH_ChkUser)"       IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkMotDePasse"  Content="$($script:T.EH_ChkPassword)"   IsChecked="False" Foreground="#FAB387" FontSize="12" Margin="4,5,4,5"/>
                 </UniformGrid>
             </StackPanel>
         </Border>
 
-        <!-- Flux video -->
         <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6"
                 Padding="14,10" Margin="0,0,0,8">
             <StackPanel>
-                <TextBlock Text="Flux video"
+                <TextBlock Text="$($script:T.EH_GrpFlux)"
                            Foreground="#A8DADC" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
                 <UniformGrid Columns="3">
-                    <CheckBox x:Name="ChkCodecEnreg"      Content="Codec (Enreg.)"      IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkResolutionEnreg" Content="Resolution (Enreg.)" IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFPSEnreg"        Content="FPS (Enreg.)"        IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkCodecLive"       Content="Codec (Live)"         IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkResolutionLive"  Content="Resolution (Live)"    IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFPSLive"         Content="FPS (Live)"           IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFluxSupp"        Content="Flux supplementaires" IsChecked="True"
-                              Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkCodecEnreg"      Content="$($script:T.EH_ChkCodecRec)"  IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkResolutionEnreg" Content="$($script:T.EH_ChkResRec)"    IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFPSEnreg"        Content="$($script:T.EH_ChkFpsRec)"   IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkCodecLive"       Content="$($script:T.EH_ChkCodecLive)" IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkResolutionLive"  Content="$($script:T.EH_ChkResLive)"   IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFPSLive"         Content="$($script:T.EH_ChkFpsLive)"  IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFluxSupp"        Content="$($script:T.EH_ChkFluxSupp)" IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                 </UniformGrid>
             </StackPanel>
         </Border>
 
-        <!-- Retention -->
         <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6"
                 Padding="14,10" Margin="0,0,0,8">
             <StackPanel>
-                <TextBlock Text="Retention"
+                <TextBlock Text="$($script:T.EH_GrpRetention)"
                            Foreground="#A6E3A1" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
-                <CheckBox x:Name="ChkRetention" Content="Retention disponible" IsChecked="True"
+                <CheckBox x:Name="ChkRetention" Content="$($script:T.EH_ChkRetention)" IsChecked="True"
                           Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
             </StackPanel>
         </Border>
 
-        <!-- Options -->
         <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6"
                 Padding="14,10" Margin="0,0,0,8">
             <StackPanel>
-                <TextBlock Text="Options"
+                <TextBlock Text="$($script:T.EH_GrpOptions)"
                            Foreground="#CBA6F7" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
-                <CheckBox x:Name="ChkSnapshot" Content="Snapshot (lent - 1 image par camera)" IsChecked="False"
+                <CheckBox x:Name="ChkSnapshot" Content="$($script:T.EH_ChkSnapshot)" IsChecked="False"
                           Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
             </StackPanel>
         </Border>
 
-        <!-- Boutons -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="BtnCancel" Content="Annuler" IsCancel="True"
+            <Button x:Name="BtnCancel" Content="$($script:T.EH_BtnCancel)" IsCancel="True"
                     Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" BorderThickness="1"
                     FontSize="13" Padding="22,8" Cursor="Hand" Margin="0,0,10,0"/>
-            <Button x:Name="BtnExport" Content="Exporter" IsDefault="True"
+            <Button x:Name="BtnExport" Content="$($script:T.EH_BtnExport)" IsDefault="True"
                     Background="#A6E3A1" Foreground="#1E1E2E" BorderThickness="0"
                     FontWeight="Bold" FontSize="13" Padding="22,8" Cursor="Hand"/>
         </StackPanel>
 
     </StackPanel>
 </Window>
-'@
+"@
 
     $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xaml))
     $window = [System.Windows.Markup.XamlReader]::Load($reader)
 
-    # Capture des references checkbox AVANT l'enregistrement des handlers (evite les problemes de scope)
     $checkboxes = [ordered]@{
         'Nom'             = $window.FindName('ChkNom')
         'Fabricant'       = $window.FindName('ChkFabricant')
@@ -161,8 +136,7 @@ function Show-ExportColumnSelector {
         }
         if ($sel.Count -eq 0) {
             [System.Windows.MessageBox]::Show(
-                'Veuillez selectionner au moins une colonne.',
-                'Aucune colonne selectionnee',
+                $script:T.EH_NoColumn, $script:T.EH_NoColumnTitle,
                 [System.Windows.MessageBoxButton]::OK,
                 [System.Windows.MessageBoxImage]::Warning
             ) | Out-Null
@@ -180,17 +154,10 @@ function Show-ExportColumnSelector {
 function Export-HardwareReport {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [hashtable]$Config,
-
-        [Parameter(Mandatory)]
-        [scriptblock]$Log,
-
-        [Parameter()]
-        [scriptblock]$Cancel = { $false },
-
-        [Parameter()]
-        [scriptblock]$ReportProgress = {}
+        [Parameter(Mandatory)] [hashtable]$Config,
+        [Parameter(Mandatory)] [scriptblock]$Log,
+        [Parameter()] [scriptblock]$Cancel = { $false },
+        [Parameter()] [scriptblock]$ReportProgress = {}
     )
 
     function Get-StreamSetting {
@@ -199,12 +166,9 @@ function Export-HardwareReport {
         return 'N/A'
     }
 
-    # ----------------------------------------------------------------
-    # Fenetre de selection des colonnes
-    # ----------------------------------------------------------------
     $selectedColumns = Show-ExportColumnSelector
     if ($null -eq $selectedColumns) {
-        & $Log "Export annule par l'utilisateur."
+        & $Log $script:T.EH_Cancelled
         return
     }
 
@@ -215,52 +179,45 @@ function Export-HardwareReport {
     }).Count -gt 0
     $needRetention    = $selectedColumns -contains 'Retention'
 
-    # ----------------------------------------------------------------
-    # Definition de toutes les colonnes possibles (ordre canonique)
-    # ----------------------------------------------------------------
+    # Definition des colonnes dans l'ordre canonique
     $allColumnDefs = @(
-        @{ Name = 'Nom';             Group = 'base';   Header = 'Nom' }
-        @{ Name = 'Fabricant';       Group = 'base';   Header = 'Fabricant' }
-        @{ Name = 'Modele';          Group = 'base';   Header = 'Modele' }
-        @{ Name = 'IP';              Group = 'base';   Header = 'IP' }
-        @{ Name = 'MAC';             Group = 'base';   Header = 'MAC' }
-        @{ Name = 'Firmware';        Group = 'base';   Header = 'Firmware' }
-        @{ Name = 'ServeurRec';      Group = 'base';   Header = 'ServeurRec' }
-        @{ Name = 'Utilisateur';     Group = 'base';   Header = 'Utilisateur' }
-        @{ Name = 'MotDePasse';      Group = 'base';   Header = 'MotDePasse' }
-        @{ Name = 'CodecEnreg';      Group = 'stream'; Header = 'Codec (Enreg.)' }
-        @{ Name = 'ResolutionEnreg'; Group = 'stream'; Header = 'Resolution (Enreg.)' }
-        @{ Name = 'FPSEnreg';        Group = 'stream'; Header = 'FPS (Enreg.)' }
-        @{ Name = 'CodecLive';       Group = 'stream'; Header = 'Codec (Live)' }
-        @{ Name = 'ResolutionLive';  Group = 'stream'; Header = 'Resolution (Live)' }
-        @{ Name = 'FPSLive';         Group = 'stream'; Header = 'FPS (Live)' }
-        @{ Name = 'FluxSupp';        Group = 'stream'; Header = 'Flux supplementaires' }
-        @{ Name = 'Retention';       Group = 'ret';    Header = 'Retention disponible' }
-        @{ Name = 'Snapshot';        Group = 'snap';   Header = 'Snapshot' }
+        @{ Name = 'Nom';             Group = 'base';   Header = $script:T.XL_Nom }
+        @{ Name = 'Fabricant';       Group = 'base';   Header = $script:T.XL_Fabricant }
+        @{ Name = 'Modele';          Group = 'base';   Header = $script:T.XL_Modele }
+        @{ Name = 'IP';              Group = 'base';   Header = $script:T.XL_IP }
+        @{ Name = 'MAC';             Group = 'base';   Header = $script:T.XL_MAC }
+        @{ Name = 'Firmware';        Group = 'base';   Header = $script:T.XL_Firmware }
+        @{ Name = 'ServeurRec';      Group = 'base';   Header = $script:T.XL_ServeurRec }
+        @{ Name = 'Utilisateur';     Group = 'base';   Header = $script:T.XL_Utilisateur }
+        @{ Name = 'MotDePasse';      Group = 'base';   Header = $script:T.XL_MotDePasse }
+        @{ Name = 'CodecEnreg';      Group = 'stream'; Header = $script:T.XL_CodecEnreg }
+        @{ Name = 'ResolutionEnreg'; Group = 'stream'; Header = $script:T.XL_ResEnreg }
+        @{ Name = 'FPSEnreg';        Group = 'stream'; Header = $script:T.XL_FpsEnreg }
+        @{ Name = 'CodecLive';       Group = 'stream'; Header = $script:T.XL_CodecLive }
+        @{ Name = 'ResolutionLive';  Group = 'stream'; Header = $script:T.XL_ResLive }
+        @{ Name = 'FPSLive';         Group = 'stream'; Header = $script:T.XL_FpsLive }
+        @{ Name = 'FluxSupp';        Group = 'stream'; Header = $script:T.XL_FluxSupp }
+        @{ Name = 'Retention';       Group = 'ret';    Header = $script:T.XL_Retention }
+        @{ Name = 'Snapshot';        Group = 'snap';   Header = $script:T.XL_Snapshot }
     )
 
-    # Filtrer en preservant l'ordre canonique
     $activeColumns = @($allColumnDefs | Where-Object { $selectedColumns -contains $_.Name })
 
-    # Index (1-based) de la colonne Snapshot, 0 si absente
     $snapColIndex = 0
     for ($i = 0; $i -lt $activeColumns.Count; $i++) {
         if ($activeColumns[$i].Name -eq 'Snapshot') { $snapColIndex = $i + 1; break }
     }
 
-    # ----------------------------------------------------------------
-    # Recuperation des donnees de base
-    # ----------------------------------------------------------------
-    & $Log "Generation du rapport hardware..."
+    & $Log $script:T.EH_LogGenerating
     if ($includePassword) {
         $camReport = @(Get-VmsCameraReport -IncludePlainTextPassword)
     } else {
         $camReport = @(Get-VmsCameraReport)
     }
     $total = $camReport.Count
-    & $Log "$total equipements trouves."
+    & $Log ($script:T.EH_LogFound -f $total)
 
-    & $Log "Chargement des objets camera..."
+    & $Log $script:T.EH_LogLoadCams
     $vmsCameras   = @(Get-VmsCamera)
     $vmsCamByName = @{}
     $vmsCamByPath = @{}
@@ -269,12 +226,9 @@ function Export-HardwareReport {
         $vmsCamByPath[$c.Path] = $c.Name
     }
 
-    # ----------------------------------------------------------------
-    # PHASE 0a : Flux video (uniquement si colonnes selectionnees)
-    # ----------------------------------------------------------------
     $streamLookup = @{}
     if ($needStreams) {
-        & $Log "Recuperation des configurations de flux video..."
+        & $Log $script:T.EH_LogStreams
         try {
             $allStreams = @($vmsCameras | Get-VmsCameraStream -Enabled -ErrorAction Stop)
             foreach ($s in $allStreams) {
@@ -286,17 +240,14 @@ function Export-HardwareReport {
                 elseif ($s.LiveDefault -and -not $streamLookup[$name].Live) { $streamLookup[$name].Live = $s }
                 else                                                          { $streamLookup[$name].Extra++ }
             }
-            & $Log "$($allStreams.Count) flux trouves pour $($streamLookup.Count) cameras."
+            & $Log ($script:T.EH_LogStreamsOk -f $allStreams.Count, $streamLookup.Count)
         }
-        catch { & $Log "AVERTISSEMENT: Impossible de recuperer les flux video : $_" }
+        catch { & $Log ($script:T.EH_LogStreamsErr -f $_) }
     }
 
-    # ----------------------------------------------------------------
-    # PHASE 0b : Retention disponible (uniquement si colonne selectionnee)
-    # ----------------------------------------------------------------
     $retentionLookup = @{}
     if ($needRetention) {
-        & $Log "Recuperation des dates d'enregistrement..."
+        & $Log $script:T.EH_LogPlayback
         try {
             $playbackData = @($vmsCameras | Get-PlaybackInfo -Parallel -ErrorAction Stop)
             foreach ($pb in $playbackData) {
@@ -304,24 +255,21 @@ function Export-HardwareReport {
                 if ($name) {
                     if ($pb.Begin -and $pb.End) {
                         $days = [int]($pb.End - $pb.Begin).TotalDays
-                        $retentionLookup[$name] = "$days jours"
+                        $retentionLookup[$name] = "$days j"
                     }
-                    else { $retentionLookup[$name] = 'Aucun' }
+                    else { $retentionLookup[$name] = $script:T.XL_Aucun }
                 }
             }
-            & $Log "Dates recuperees pour $($retentionLookup.Count) cameras."
+            & $Log ($script:T.EH_LogPlaybackOk -f $retentionLookup.Count)
         }
-        catch { & $Log "AVERTISSEMENT: Impossible de recuperer les dates d'enregistrement : $_" }
+        catch { & $Log ($script:T.EH_LogPlaybackErr -f $_) }
     }
 
-    # ----------------------------------------------------------------
-    # PHASE 1 : Snapshots en parallele (uniquement si colonne selectionnee)
-    # ----------------------------------------------------------------
     $tempDir   = $null
     $snapPaths = @{}
 
     if ($includeSnapshots) {
-        & $Log "Recuperation des snapshots en parallele..."
+        & $Log $script:T.EH_LogSnaps
         $quality = $Config.snapshotQuality
         $tempDir = Join-Path $env:TEMP "MilestoneHW_$(Get-Random)"
         New-Item $tempDir -ItemType Directory -Force | Out-Null
@@ -367,11 +315,11 @@ function Export-HardwareReport {
                     if ($result) {
                         $snapPaths[$job.Name] = $result
                         $received++
-                        & $Log "  [OK $received/$($jobs.Count)] $($job.Name)"
+                        & $Log ($script:T.EH_LogSnapOk -f $received, $jobs.Count, $job.Name)
                     }
-                    else { & $Log "  AVERTISSEMENT: Snapshot vide '$($job.Name)'" }
+                    else { & $Log ($script:T.EH_LogSnapEmpty -f $job.Name) }
                 }
-                catch { & $Log "  AVERTISSEMENT: '$($job.Name)' : $_" }
+                catch { & $Log ($script:T.EH_LogSnapErr -f $job.Name, $_) }
                 finally { $job.PS.Dispose() }
                 & $ReportProgress ($jobs.Count - $pending.Count) $jobs.Count
             }
@@ -380,23 +328,20 @@ function Export-HardwareReport {
 
         $pool.Close()
         $pool.Dispose()
-        & $Log "$($snapPaths.Count) / $($jobs.Count) snapshots recuperes."
+        & $Log ($script:T.EH_LogSnapsDone -f $snapPaths.Count, $jobs.Count)
     }
 
-    # ----------------------------------------------------------------
-    # PHASE 2 : Construction du fichier Excel
-    # ----------------------------------------------------------------
     if (-not (Test-Path $Config.outputDirectory)) {
         New-Item -Path $Config.outputDirectory -ItemType Directory -Force | Out-Null
     }
-    $xlsxPath = Join-Path $Config.outputDirectory 'Liste_des_Cameras.xlsx'
+    $xlsxPath = Join-Path $Config.outputDirectory $script:T.XL_FileName
 
     $excel = $null
     try {
         $excel = New-Object -ComObject Excel.Application -ErrorAction Stop
     }
     catch {
-        & $Log "ERREUR: Excel n'est pas installe sur ce poste."
+        & $Log $script:T.EH_LogNoExcel
         if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
         return
     }
@@ -414,9 +359,8 @@ function Export-HardwareReport {
     try {
         $workbook = $excel.Workbooks.Add()
         $sheet    = $workbook.Sheets.Item(1)
-        $sheet.Name = 'Cameras'
+        $sheet.Name = $script:T.XL_SheetName
 
-        # En-tetes dynamiques selon les colonnes actives
         for ($c = 0; $c -lt $activeColumns.Count; $c++) {
             $col  = $activeColumns[$c]
             $cell = $sheet.Cells.Item(1, $c + 1)
@@ -434,17 +378,17 @@ function Export-HardwareReport {
         $row   = 2
         $count = 0
 
-        & $Log "Construction du fichier Excel..."
+        & $Log $script:T.EH_LogBuilding
 
         foreach ($cam in $camReport) {
             if (& $Cancel) {
-                & $Log "AVERTISSEMENT: Operation annulee apres $count / $total cameras."
+                & $Log ($script:T.EH_LogCancelled -f $count, $total)
                 break
             }
 
             $count++
             & $ReportProgress $count $total
-            & $Log "[$count/$total] $($cam.Name)"
+            & $Log ($script:T.EH_LogCamRow -f $count, $total, $cam.Name)
 
             $ip = if ($cam.Address -match '(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})') { $Matches[1] } else { $cam.Address }
 
@@ -456,7 +400,6 @@ function Export-HardwareReport {
 
             $ret = if ($retentionLookup.ContainsKey($cam.Name)) { $retentionLookup[$cam.Name] } else { 'N/A' }
 
-            # Table de toutes les valeurs possibles, indexees par nom de colonne
             $values = @{
                 'Nom'             = $cam.Name
                 'Fabricant'       = $cam.DriverFamily
@@ -473,18 +416,16 @@ function Export-HardwareReport {
                 'CodecLive'       = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' }
                 'ResolutionLive'  = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' }
                 'FPSLive'         = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' }
-                'FluxSupp'        = if ($extraCount -gt 0) { "$extraCount flux supp." } else { '' }
+                'FluxSupp'        = if ($extraCount -gt 0) { $script:T.XL_ExtraFlux -f $extraCount } else { '' }
                 'Retention'       = $ret
             }
 
-            # Ecriture des colonnes selectionnees dans l'ordre canonique
             for ($c = 0; $c -lt $activeColumns.Count; $c++) {
                 $colName = $activeColumns[$c].Name
                 if ($colName -eq 'Snapshot') { continue }
                 $sheet.Cells.Item($row, $c + 1) = $values[$colName]
             }
 
-            # Snapshot (embedding image dans la cellule)
             if ($snapColIndex -gt 0) {
                 $sheet.Rows.Item($row).RowHeight = 90
                 $snapFile = $snapPaths[$cam.Name]
@@ -500,14 +441,13 @@ function Export-HardwareReport {
                         )
                         $shape.Placement = 1
                     }
-                    catch { & $Log "  AVERTISSEMENT: Image '$($cam.Name)' : $_" }
+                    catch { & $Log ($script:T.EH_LogImgErr -f $cam.Name, $_) }
                 }
             }
 
             $row++
         }
 
-        # Mise en forme finale
         if ($snapColIndex -gt 0) { $sheet.Columns.Item($snapColIndex).ColumnWidth = 28 }
         for ($c = 1; $c -le $activeColumns.Count; $c++) {
             if ($c -ne $snapColIndex) { $sheet.Columns.Item($c).AutoFit() | Out-Null }
@@ -519,7 +459,7 @@ function Export-HardwareReport {
         $range.Borders.Weight    = 2
 
         $workbook.SaveAs($xlsxPath, 51)
-        & $Log "Rapport exporte : $xlsxPath"
+        & $Log ($script:T.EH_LogSaved -f $xlsxPath)
     }
     finally {
         try { $workbook.Close($false) } catch {}

@@ -262,7 +262,7 @@
                 <!-- Pied de page avec dossier de sortie -->
                 <Border DockPanel.Dock="Bottom" Padding="16,12">
                     <StackPanel>
-                        <TextBlock Text="DOSSIER DE SORTIE"
+                        <TextBlock x:Name="LblOutputDirHeader" Text="DOSSIER DE SORTIE"
                                    FontFamily="Segoe UI" FontSize="10" FontWeight="SemiBold"
                                    Foreground="#585B70" Margin="0,0,0,6"/>
                         <Grid>
@@ -283,7 +283,7 @@
                                     Style="{StaticResource SmallButton}"
                                     Margin="8,0,0,0"/>
                         </Grid>
-                        <TextBlock Text="v4.3 — Fork by Vincent"
+                        <TextBlock x:Name="LblVersion" Text="v4.4  Fork by Vincent"
                                    FontFamily="Segoe UI" FontSize="10"
                                    Foreground="#45475A"
                                    HorizontalAlignment="Center"
@@ -296,7 +296,7 @@
                     <StackPanel>
 
                         <!-- Categorie : Mode capture -->
-                        <TextBlock Text="MODE CAPTURE"
+                        <TextBlock x:Name="LblModeCapture" Text="MODE CAPTURE"
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                    Foreground="#CBA6F7" Margin="20,12,0,4"/>
 
@@ -315,7 +315,7 @@
                                 Padding="12,10"
                                 Visibility="Collapsed">
                             <StackPanel>
-                                <TextBlock Text="Date"
+                                <TextBlock x:Name="LblDate" Text="Date"
                                            FontFamily="Segoe UI" FontSize="10"
                                            Foreground="#585B70" Margin="0,0,0,4"/>
                                 <DatePicker x:Name="SnapshotDate"
@@ -323,7 +323,7 @@
                                             Background="#313244"
                                             Foreground="#1E1E2E"
                                             BorderBrush="#45475A"/>
-                                <TextBlock Text="Heure (HH : mm)"
+                                <TextBlock x:Name="LblHeure" Text="Heure (HH : mm)"
                                            FontFamily="Segoe UI" FontSize="10"
                                            Foreground="#585B70" Margin="0,10,0,4"/>
                                 <StackPanel Orientation="Horizontal">
@@ -348,7 +348,7 @@
                         </Border>
 
                         <!-- Categorie : Snapshots -->
-                        <TextBlock Text="SNAPSHOTS"
+                        <TextBlock x:Name="LblSnapshots" Text="SNAPSHOTS"
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                    Foreground="#89B4FA" Margin="20,12,0,4"/>
 
@@ -377,7 +377,7 @@
                         </Button>
 
                         <!-- Categorie : Gestion -->
-                        <TextBlock Text="GESTION"
+                        <TextBlock x:Name="LblGestion" Text="GESTION"
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                    Foreground="#A6E3A1" Margin="20,20,0,4"/>
 
@@ -398,7 +398,7 @@
                         </Button>
 
                         <!-- Categorie : Monitoring -->
-                        <TextBlock Text="MONITORING"
+                        <TextBlock x:Name="LblMonitoring" Text="MONITORING"
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                    Foreground="#89DCEB" Margin="20,20,0,4"/>
 
@@ -419,7 +419,7 @@
                         </Button>
 
                         <!-- Categorie : Diagnostic -->
-                        <TextBlock Text="DIAGNOSTIC"
+                        <TextBlock x:Name="LblDiagnostic" Text="DIAGNOSTIC"
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                    Foreground="#FAB387" Margin="20,20,0,4"/>
 
@@ -466,7 +466,7 @@
                             Style="{StaticResource CancelButton}"
                             Visibility="Collapsed"
                             Margin="0,0,8,0"/>
-                    <TextBlock Text="Journal d'activite"
+                    <TextBlock x:Name="LblJournal" Text="Journal d'activite"
                                FontFamily="Segoe UI" FontSize="16" FontWeight="SemiBold"
                                Foreground="#CDD6F4" VerticalAlignment="Center"/>
                 </DockPanel>

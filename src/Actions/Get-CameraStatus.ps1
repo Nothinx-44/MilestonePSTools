@@ -1,46 +1,33 @@
-<#
-.SYNOPSIS
-    Etat temps reel de toutes les cameras via l'Event Server Milestone (Get-ItemState).
-#>
-
 function Get-CameraStatus {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [hashtable]$Config,
-
-        [Parameter(Mandatory)]
-        [scriptblock]$Log,
-
-        [Parameter()]
-        [scriptblock]$Cancel = { $false },
-
-        [Parameter()]
-        [scriptblock]$ReportProgress = {}
+        [Parameter(Mandatory)] [hashtable]$Config,
+        [Parameter(Mandatory)] [scriptblock]$Log,
+        [Parameter()] [scriptblock]$Cancel = { $false },
+        [Parameter()] [scriptblock]$ReportProgress = {}
     )
 
-    & $Log "Interrogation de l'Event Server..."
+    & $Log $script:T.CS_LogQuerying
 
     try {
         $states = @(Get-ItemState -CamerasOnly -ErrorAction Stop)
     }
     catch {
-        & $Log "ERREUR: Get-ItemState : $_"
+        & $Log ($script:T.CS_LogError -f $_)
         return
     }
 
-    $total = $states.Count
-    & $Log "$total cameras interrogees."
+    $total    = $states.Count
+    & $Log ($script:T.CS_LogFound -f $total)
 
-    $rows  = [System.Collections.Generic.List[PSCustomObject]]::new()
-    $ok    = 0
-    $ko    = 0
-    $count = 0
-
+    $rows     = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $ok       = 0
+    $ko       = 0
+    $count    = 0
     $disabled = 0
 
     foreach ($state in $states) {
-        if (& $Cancel) { & $Log "AVERTISSEMENT: Operation annulee apres $count / $total." ; break }
+        if (& $Cancel) { & $Log ($script:T.CS_LogCancelled -f $count, $total) ; break }
 
         $count++
         & $ReportProgress $count $total
@@ -49,47 +36,36 @@ function Get-CameraStatus {
                 else { $state.FQID.ObjectId.ToString() }
 
         switch ($state.State) {
-            'Responding' {
-                $ok++
-                & $Log "  [OK] $name"
-            }
-            'Disabled' {
-                $disabled++
-                # Camera desactivee volontairement, pas une erreur
-            }
-            default {
-                $ko++
-                & $Log "  ERREUR: $name : $($state.State)"
-            }
+            'Responding' { $ok++ ; & $Log ($script:T.CS_LogOk -f $name) }
+            'Disabled'   { $disabled++ }
+            default      { $ko++ ; & $Log ($script:T.CS_LogErr -f $name, $state.State) }
         }
 
         if ($state.State -ne 'Disabled') {
             $rows.Add([PSCustomObject]@{
-                Nom  = $name
-                Etat = if ($state.State -eq 'Responding') { 'OK' } else { $state.State }
-                Type = $state.ItemType
+                ($script:T.CS_CsvNom)  = $name
+                ($script:T.CS_CsvEtat) = if ($state.State -eq 'Responding') { $script:T.CS_CsvOk } else { $state.State }
+                ($script:T.CS_CsvType) = $state.ItemType
             })
         }
     }
 
-    if ($disabled -gt 0) {
-        & $Log "  ($disabled camera(s) desactivee(s) ignoree(s))"
-    }
+    if ($disabled -gt 0) { & $Log ($script:T.CS_LogDisabled -f $disabled) }
 
     if ($ko -gt 0) {
-        & $Log "AVERTISSEMENT: $ko camera(s) hors ligne ou en erreur sur $($total - $disabled) actives."
+        & $Log ($script:T.CS_LogKo -f $ko, ($total - $disabled))
     }
     else {
-        & $Log "Toutes les cameras actives ($ok) sont operationnelles."
+        & $Log ($script:T.CS_LogAllOk -f $ok)
     }
 
     if ($rows.Count -gt 0 -and -not (& $Cancel)) {
         if (-not (Test-Path $Config.outputDirectory)) {
             New-Item -Path $Config.outputDirectory -ItemType Directory -Force | Out-Null
         }
-        $csvPath = Join-Path $Config.outputDirectory 'Etat_Cameras.csv'
+        $csvPath = Join-Path $Config.outputDirectory $script:T.CS_CsvFileName
         $rows | Export-Csv -Path $csvPath -NoTypeInformation `
             -Encoding $Config.csvEncoding -Delimiter $Config.csvDelimiter
-        & $Log "Rapport exporte : $csvPath"
+        & $Log ($script:T.CS_LogExported -f $csvPath)
     }
 }

@@ -1,5 +1,18 @@
 # Release Notes
 
+## v4.5
+> Support multilingue FR / EN
+
+### Nouveautes
+- **Selecteur de langue au demarrage** : une fenetre de choix FR / EN s'affiche avant la verification des dependances. La langue selectionnee s'applique a toute l'application pour la session.
+- **Interface entierement traduite** : tous les textes de l'UI sont traduits — fenetre de demarrage, fenetre principale (categories, boutons, statuts, combo mode capture), fenetre de selection des colonnes Export Hardware.
+- **Excel traduit** : les en-tetes de colonnes du fichier Excel suivent la langue choisie. Le nom du fichier change egalement (`Liste_des_Cameras.xlsx` en francais, `Camera_List.xlsx` en anglais).
+- **CSV traduits** : les noms de colonnes et les noms de fichiers CSV s'adaptent a la langue (`Etat_Cameras.csv` / `Camera_Status.csv`, `Dates_Enregistrement.csv` / `Recording_Dates.csv`, `Stats_Enregistrement.csv` / `Recording_Stats.csv`).
+- **Logs traduits** : tous les messages de journal d'activite (progression, erreurs, avertissements) sont emis dans la langue selectionnee.
+- **Architecture i18n** : fichiers `src/Lang/fr.ps1` et `src/Lang/en.ps1` centralisant ~200 cles de traduction. Extensible a d'autres langues sans modifier le code applicatif.
+
+---
+
 ## v4.4
 > Export Hardware — selection des colonnes et securite mot de passe
 

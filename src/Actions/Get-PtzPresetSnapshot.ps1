@@ -1,25 +1,11 @@
-<#
-.SYNOPSIS
-    Capture un snapshot a chaque position preset PTZ des cameras selectionnees.
-#>
-
 function Get-PtzPresetSnapshot {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
-        [hashtable]$Config,
-
-        [Parameter(Mandatory)]
-        [scriptblock]$Log,
-
-        [Parameter()]
-        [scriptblock]$Cancel = { $false },
-
-        [Parameter()]
-        [scriptblock]$ReportProgress = {},
-
-        [Parameter()]
-        [nullable[datetime]]$SnapshotTime = $null
+        [Parameter(Mandatory)] [hashtable]$Config,
+        [Parameter(Mandatory)] [scriptblock]$Log,
+        [Parameter()] [scriptblock]$Cancel = { $false },
+        [Parameter()] [scriptblock]$ReportProgress = {},
+        [Parameter()] [nullable[datetime]]$SnapshotTime = $null
     )
 
     $outputDir = Join-Path $Config.outputDirectory 'PTZ_Snapshots'
@@ -27,7 +13,7 @@ function Get-PtzPresetSnapshot {
         New-Item -Path $outputDir -ItemType Directory -Force | Out-Null
     }
 
-    & $Log "Selection des cameras PTZ..."
+    & $Log $script:T.PTZ_LogSelecting
 
     $cameras = Select-Camera |
         Where-Object { $_.Enabled } |
@@ -35,50 +21,36 @@ function Get-PtzPresetSnapshot {
         Where-Object { $_.Enabled -and $_.PtzPresetFolder.PtzPresets.Count -gt 0 }
 
     if (-not $cameras) {
-        & $Log "Aucune camera PTZ avec presets selectionnee."
+        & $Log $script:T.PTZ_LogNone
         return
     }
 
     $cameraList  = @($cameras)
     $totalCams   = $cameraList.Count
-    & $Log "$totalCams camera(s) PTZ avec presets trouvee(s)."
+    & $Log ($script:T.PTZ_LogFound -f $totalCams)
 
-    if ($SnapshotTime) {
-        & $Log "Mode historique : $($SnapshotTime.ToString('dd/MM/yyyy HH:mm'))"
-    }
+    if ($SnapshotTime) { & $Log ($script:T.PTZ_LogHistorique -f $SnapshotTime.ToString('dd/MM/yyyy HH:mm')) }
 
-    # Compter le total de presets pour la barre de progression
     $totalPresets = ($cameraList | ForEach-Object { $_.PtzPresetFolder.PtzPresets.Count } | Measure-Object -Sum).Sum
     $donePresets  = 0
 
     foreach ($camera in $cameraList) {
-        if (& $Cancel) {
-            & $Log "AVERTISSEMENT: Operation annulee."
-            break
-        }
+        if (& $Cancel) { & $Log $script:T.PTZ_LogCancelled ; break }
 
         $presets = $camera.PtzPresetFolder.PtzPresets
-        & $Log "Camera '$($camera.Name)' : $($presets.Count) preset(s)."
+        & $Log ($script:T.PTZ_LogCamera -f $camera.Name, $presets.Count)
 
         foreach ($ptzPreset in $presets) {
-            if (& $Cancel) {
-                & $Log "AVERTISSEMENT: Operation annulee."
-                break
-            }
+            if (& $Cancel) { & $Log $script:T.PTZ_LogCancelled ; break }
 
             $donePresets++
             & $ReportProgress $donePresets $totalPresets
+            & $Log ($script:T.PTZ_LogMoving -f $ptzPreset.Name)
 
-            & $Log "  Deplacement vers preset '$($ptzPreset.Name)'..."
+            try { Invoke-PtzPreset -PtzPreset $ptzPreset -VerifyCoordinates }
+            catch { & $Log ($script:T.PTZ_LogPosErr -f $_) }
 
-            try {
-                Invoke-PtzPreset -PtzPreset $ptzPreset -VerifyCoordinates
-            }
-            catch {
-                & $Log "  AVERTISSEMENT: Verification de position echouee: $_"
-            }
-
-            & $Log "  Capture du snapshot..."
+            & $Log $script:T.PTZ_LogCapturing
             try {
                 $snapParams = @{
                     Quality  = $Config.snapshotQuality
@@ -92,15 +64,13 @@ function Get-PtzPresetSnapshot {
                 else {
                     $camera | Get-Snapshot @snapParams -Behavior GetEnd
                 }
-                & $Log "  Snapshot '$($ptzPreset.Name)' enregistre."
+                & $Log ($script:T.PTZ_LogSaved -f $ptzPreset.Name)
             }
-            catch {
-                & $Log "ERREUR: Snapshot '$($ptzPreset.Name)' echoue : $_"
-            }
+            catch { & $Log ($script:T.PTZ_LogError -f $ptzPreset.Name, $_) }
         }
     }
 
     if (-not (& $Cancel)) {
-        & $Log "Capture PTZ terminee. Fichiers dans : $outputDir"
+        & $Log ($script:T.PTZ_LogDone -f $outputDir)
     }
 }

@@ -5,22 +5,22 @@
 
 param(
     [Parameter()]
-    [string]$RootPath
+    [string]$RootPath,
+    [Parameter()]
+    [string]$Lang = 'fr'
 )
-
-# ============================================================
-# 1. CHEMINS ET CONFIGURATION
-# ============================================================
 
 $script:AppRoot = $RootPath
 $script:SrcPath = Join-Path $AppRoot 'src'
+
+# Chargement de la langue
+. (Join-Path $script:SrcPath "Lang/$Lang.ps1")
 
 $configPath = Join-Path $AppRoot 'config.json'
 if (Test-Path $configPath) {
     $configRaw = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
 }
 else {
-    Write-Warning "Fichier config.json introuvable. Utilisation des valeurs par defaut."
     $configRaw = [PSCustomObject]@{
         outputDirectory = './Output'
         snapshotQuality = 95
@@ -45,7 +45,7 @@ $script:Config = @{
 }
 
 # ============================================================
-# 2. CHARGEMENT DES SCRIPTS
+# CHARGEMENT DES SCRIPTS
 # ============================================================
 
 . (Join-Path $SrcPath 'Core/Initialize-Modules.ps1')
@@ -63,12 +63,12 @@ $script:Config = @{
 . (Join-Path $SrcPath 'Actions/Get-PlaybackReport.ps1')
 
 # ============================================================
-# 3. INITIALISATION DES MODULES ET CONNEXION
+# INITIALISATION MODULES ET CONNEXION
 # ============================================================
 
 if (Test-Path $DependenciesPath) {
     $installMode = 'Offline'
-    Write-Host 'Mode Offline detecte (dossier Dependencies/ present).' -ForegroundColor Yellow
+    Write-Host 'Offline mode detected.' -ForegroundColor Yellow
 }
 else {
     $installMode = 'Online'
@@ -77,12 +77,12 @@ else {
 $initLog = { param($Message) Write-Host $Message }
 Initialize-RequiredModules -InstallMode $installMode -DependenciesPath $DependenciesPath -Log $initLog
 
-Write-Host 'Connexion au serveur Milestone...' -ForegroundColor Cyan
+Write-Host 'Connecting to Milestone server...' -ForegroundColor Cyan
 Connect-ManagementServer -ShowDialog -AcceptEula -Force
-Write-Host 'Connecte.' -ForegroundColor Green
+Write-Host 'Connected.' -ForegroundColor Green
 
 # ============================================================
-# 4. MASQUER LA CONSOLE
+# MASQUER LA CONSOLE
 # ============================================================
 
 Add-Type -Name ConsoleHelper -Namespace '' -MemberDefinition @'
@@ -94,7 +94,7 @@ $consoleHandle = [ConsoleHelper]::GetConsoleWindow()
 [ConsoleHelper]::ShowWindow($consoleHandle, 0) | Out-Null
 
 # ============================================================
-# 5. CHARGEMENT DE L'INTERFACE WPF
+# CHARGEMENT WPF
 # ============================================================
 
 Add-Type -AssemblyName PresentationFramework
@@ -108,7 +108,7 @@ $xamlReader  = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($xam
 $script:Window = [System.Windows.Markup.XamlReader]::Load($xamlReader)
 
 # ============================================================
-# 6. REFERENCES AUX ELEMENTS UI
+# REFERENCES UI
 # ============================================================
 
 $script:LogOutput        = $Window.FindName('LogOutput')
@@ -136,49 +136,74 @@ $script:SnapshotDate        = $Window.FindName('SnapshotDate')
 $script:SnapshotHour        = $Window.FindName('SnapshotHour')
 $script:SnapshotMinute      = $Window.FindName('SnapshotMinute')
 
-# Initialiser le document RichTextBox (supprimer le paragraphe vide par defaut)
+# ============================================================
+# APPLICATION DES TEXTES TRADUITS
+# ============================================================
+
+$Window.Title                               = $script:T.MW_AppTitle
+$Window.FindName('LblOutputDirHeader').Text = $script:T.MW_LblOutputDir
+$Window.FindName('LblVersion').Text         = $script:T.MW_Version
+$Window.FindName('LblModeCapture').Text     = $script:T.MW_LblModeCapture
+$Window.FindName('LblDate').Text            = $script:T.MW_LblDate
+$Window.FindName('LblHeure').Text           = $script:T.MW_LblHeure
+$Window.FindName('LblSnapshots').Text       = $script:T.MW_LblSnapshots
+$Window.FindName('LblGestion').Text         = $script:T.MW_LblGestion
+$Window.FindName('LblMonitoring').Text      = $script:T.MW_LblMonitoring
+$Window.FindName('LblDiagnostic').Text      = $script:T.MW_LblDiagnostic
+$Window.FindName('LblJournal').Text         = $script:T.MW_LblJournal
+
+$script:BtnOutputDir.Content = $script:T.MW_BtnOutputDir
+$script:BtnClearLog.Content  = $script:T.MW_BtnClearLog
+$script:BtnCancel.Content    = $script:T.MW_BtnCancel
+
+$script:SnapshotMode.Items[0].Content = $script:T.MW_CbiLive
+$script:SnapshotMode.Items[1].Content = $script:T.MW_CbiHistorique
+
+$script:BtnSnapshotSelected.Content.Children[1].Text = $script:T.MW_BtnSnapshotSel
+$script:BtnSnapshotAll.Content.Children[1].Text      = $script:T.MW_BtnSnapshotAll
+$script:BtnPtzSnapshot.Content.Children[1].Text      = $script:T.MW_BtnPtz
+$script:BtnExportHardware.Content.Children[1].Text   = $script:T.MW_BtnExportHardware
+$script:BtnGroupByModel.Content.Children[1].Text     = $script:T.MW_BtnGroupByModel
+$script:BtnCameraStatus.Content.Children[1].Text     = $script:T.MW_BtnCameraStatus
+$script:BtnPlaybackReport.Content.Children[1].Text   = $script:T.MW_BtnPlaybackReport
+$script:BtnRecordingStats.Content.Children[1].Text   = $script:T.MW_BtnRecordingStats
+$script:BtnLicenseInfo.Content.Children[1].Text      = $script:T.MW_BtnLicenseInfo
+
+# Init document RichTextBox
 $script:LogOutput.Document.Blocks.Clear()
 $script:LogOutput.Document.PagePadding = [System.Windows.Thickness]::new(16, 12, 16, 12)
 
-# Statut de connexion
 $script:StatusIndicator.Fill = [System.Windows.Media.Brushes]::LightGreen
-$script:StatusText.Text      = 'Connecte'
-
-# Dossier de sortie dans la sidebar
+$script:StatusText.Text      = $script:T.MW_StatusConnected
 $script:OutputDirText.Text   = $script:Config.outputDirectory
-
-# Date par defaut = hier (cas d'usage le plus courant)
 $script:SnapshotDate.SelectedDate = [datetime]::Today.AddDays(-1)
 
 # ============================================================
-# 7. ETAT PARTAGE POUR CANCEL ET PROGRESS
+# ETAT PARTAGE
 # ============================================================
 
 $script:CancelRequested = $false
-
-# Callbacks passes aux actions
 $script:IsCancelled = { $script:CancelRequested }
 
-# Retourne $null en mode live, un [datetime] en mode historique, $false si validation echoue
 function Get-SnapshotDateTime {
     if ($script:SnapshotMode.SelectedIndex -eq 0) { return $null }
 
     $date = $script:SnapshotDate.SelectedDate
     if (-not $date) {
         [System.Windows.MessageBox]::Show(
-            "Veuillez selectionner une date.", 'Date manquante', 'OK', 'Warning') | Out-Null
+            $script:T.App_DateMissing, $script:T.App_DateTitle, 'OK', 'Warning') | Out-Null
         return $false
     }
 
     $h = 0; $m = 0
-    if (-not [int]::TryParse($script:SnapshotHour.Text,   [ref]$h) -or $h -lt 0 -or $h -gt 23) {
+    if (-not [int]::TryParse($script:SnapshotHour.Text, [ref]$h) -or $h -lt 0 -or $h -gt 23) {
         [System.Windows.MessageBox]::Show(
-            "Heure invalide. Entrez une valeur entre 0 et 23.", 'Heure invalide', 'OK', 'Warning') | Out-Null
+            $script:T.App_HourInvalid, $script:T.App_HourTitle, 'OK', 'Warning') | Out-Null
         return $false
     }
     if (-not [int]::TryParse($script:SnapshotMinute.Text, [ref]$m) -or $m -lt 0 -or $m -gt 59) {
         [System.Windows.MessageBox]::Show(
-            "Minutes invalides. Entrez une valeur entre 0 et 59.", 'Minutes invalides', 'OK', 'Warning') | Out-Null
+            $script:T.App_MinInvalid, $script:T.App_MinTitle, 'OK', 'Warning') | Out-Null
         return $false
     }
 
@@ -192,21 +217,17 @@ $script:ReportProgress = {
         $script:ProgressBar.Maximum         = [double]$Total
         $script:ProgressBar.Value           = [double]$Current
     }
-    # Pomper le dispatcher : traite les evenements en attente (clic Annuler inclus)
     [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
         [System.Windows.Threading.DispatcherPriority]::Background, [Action]{}
     )
 }
 
 # ============================================================
-# 8. FONCTIONS UTILITAIRES UI
+# FONCTIONS UI
 # ============================================================
 
 function Write-UILog {
-    param(
-        [string]$Message,
-        [string]$Level = 'INFO'
-    )
+    param([string]$Message, [string]$Level = 'INFO')
 
     $timestamp = Get-Date -Format 'HH:mm:ss'
     $fullMsg   = "[$timestamp] $Message"
@@ -255,7 +276,7 @@ function Set-UIBusy {
 function Set-UIReady {
     foreach ($btn in $script:ActionButtons) { $btn.IsEnabled = $true }
     $script:BtnCancel.Visibility        = [System.Windows.Visibility]::Collapsed
-    $script:ActionStatus.Text           = 'Pret'
+    $script:ActionStatus.Text           = $script:T.MW_StatusReady
     $script:ProgressBar.IsIndeterminate = $false
     $script:ProgressBar.Value           = 0
     $script:ProgressBar.Visibility      = [System.Windows.Visibility]::Collapsed
@@ -263,10 +284,7 @@ function Set-UIReady {
 }
 
 function Invoke-Action {
-    param(
-        [string]$Name,
-        [scriptblock]$Action
-    )
+    param([string]$Name, [scriptblock]$Action)
 
     $script:CancelRequested = $false
     Set-UIBusy -ActionName $Name
@@ -274,12 +292,11 @@ function Invoke-Action {
 
     try {
         & $Action
-
         if ($script:CancelRequested) {
-            Write-UILog "Operation annulee." 'WARN'
+            Write-UILog $script:T.App_ActionCancelled 'WARN'
         }
         else {
-            Write-UILog "Action terminee avec succes." 'SUCCESS'
+            Write-UILog $script:T.App_ActionDone 'SUCCESS'
         }
     }
     catch {
@@ -292,14 +309,14 @@ function Invoke-Action {
 }
 
 # ============================================================
-# 9. BRANCHEMENT DES EVENEMENTS
+# EVENEMENTS
 # ============================================================
 
 $logCallback = {
     param([string]$Message)
-    $level = if ($Message -match '^ERREUR|^ERROR')           { 'ERROR'   }
-             elseif ($Message -match '^AVERTISSEMENT|^WARN') { 'WARN'    }
-             else                                            { 'INFO'    }
+    $level = if ($Message -match '^ERREUR|^ERROR')           { 'ERROR' }
+             elseif ($Message -match '^AVERTISSEMENT|^WARN') { 'WARN'  }
+             else                                            { 'INFO'  }
     Write-UILog -Message $Message -Level $level
 }
 
@@ -311,7 +328,7 @@ $script:SnapshotMode.Add_SelectionChanged({
 $BtnSnapshotSelected.Add_Click({
     $script:SnapshotTime = Get-SnapshotDateTime
     if ($script:SnapshotTime -eq $false) { return }
-    Invoke-Action -Name 'Snapshot - Selection' -Action {
+    Invoke-Action -Name $script:T.Act_SnapshotSel -Action {
         Get-SnapshotSelected -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -SnapshotTime $script:SnapshotTime
     }
@@ -320,7 +337,7 @@ $BtnSnapshotSelected.Add_Click({
 $BtnSnapshotAll.Add_Click({
     $script:SnapshotTime = Get-SnapshotDateTime
     if ($script:SnapshotTime -eq $false) { return }
-    Invoke-Action -Name 'Snapshot - Toutes les cameras' -Action {
+    Invoke-Action -Name $script:T.Act_SnapshotAll -Action {
         Get-SnapshotAll -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress `
             -SnapshotTime $script:SnapshotTime
@@ -330,7 +347,7 @@ $BtnSnapshotAll.Add_Click({
 $BtnPtzSnapshot.Add_Click({
     $script:SnapshotTime = Get-SnapshotDateTime
     if ($script:SnapshotTime -eq $false) { return }
-    Invoke-Action -Name 'Snapshot - Presets PTZ' -Action {
+    Invoke-Action -Name $script:T.Act_SnapshotPtz -Action {
         Get-PtzPresetSnapshot -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress `
             -SnapshotTime $script:SnapshotTime
@@ -338,42 +355,42 @@ $BtnPtzSnapshot.Add_Click({
 })
 
 $BtnExportHardware.Add_Click({
-    Invoke-Action -Name 'Export Hardware' -Action {
+    Invoke-Action -Name $script:T.Act_ExportHW -Action {
         Export-HardwareReport -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnGroupByModel.Add_Click({
-    Invoke-Action -Name 'Grouper par Modele' -Action {
+    Invoke-Action -Name $script:T.Act_GroupModel -Action {
         Set-CameraGroupByModel -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnCameraStatus.Add_Click({
-    Invoke-Action -Name 'Etat des cameras' -Action {
+    Invoke-Action -Name $script:T.Act_CamStatus -Action {
         Get-CameraStatus -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnPlaybackReport.Add_Click({
-    Invoke-Action -Name 'Dates d enregistrement' -Action {
+    Invoke-Action -Name $script:T.Act_Playback -Action {
         Get-PlaybackReport -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnRecordingStats.Add_Click({
-    Invoke-Action -Name 'Stats Enregistrement (7 jours)' -Action {
+    Invoke-Action -Name $script:T.Act_RecStats -Action {
         Get-RecordingStats -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress
     }
 })
 
 $BtnLicenseInfo.Add_Click({
-    Invoke-Action -Name 'Informations Licence' -Action {
+    Invoke-Action -Name $script:T.Act_License -Action {
         Get-VmsLicenseSummary -Log $logCallback
     }
 })
@@ -385,34 +402,34 @@ $BtnClearLog.Add_Click({
 $BtnCancel.Add_Click({
     $script:CancelRequested = $true
     $script:BtnCancel.IsEnabled = $false
-    $script:ActionStatus.Text = 'Annulation en cours...'
+    $script:ActionStatus.Text   = $script:T.MW_StatusCancelling
 })
 
 $BtnOutputDir.Add_Click({
     $dialog = [System.Windows.Forms.FolderBrowserDialog]::new()
-    $dialog.Description  = 'Choisir le dossier de sortie'
-    $dialog.SelectedPath = $script:Config.outputDirectory
+    $dialog.Description       = $script:T.App_ChooseDir
+    $dialog.SelectedPath      = $script:Config.outputDirectory
     $dialog.ShowNewFolderButton = $true
 
     if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $script:Config.outputDirectory = $dialog.SelectedPath
         $script:OutputDirText.Text     = $dialog.SelectedPath
-        Write-UILog "Dossier de sortie change : $($dialog.SelectedPath)" 'INFO'
+        Write-UILog ($script:T.App_OutputChanged -f $dialog.SelectedPath) 'INFO'
     }
 })
 
 $Window.Add_Closing({
-    Write-ActivityLog -Message 'Fermeture de l application' -Level 'INFO' -LogDirectory $script:Config.logDirectory
+    Write-ActivityLog -Message $script:T.App_Closing -Level 'INFO' -LogDirectory $script:Config.logDirectory
     try { Disconnect-ManagementServer } catch {}
     [ConsoleHelper]::ShowWindow($consoleHandle, 5) | Out-Null
 })
 
 # ============================================================
-# 10. AFFICHAGE
+# AFFICHAGE
 # ============================================================
 
-Write-UILog "Application demarree. Connecte au serveur Milestone." 'SUCCESS'
-Write-UILog "Repertoire de sortie : $($script:Config.outputDirectory)"
+Write-UILog $script:T.App_Started 'SUCCESS'
+Write-UILog ($script:T.App_OutputDir -f $script:Config.outputDirectory)
 
 $Window.Add_Loaded({ $Window.Activate() })
 [void]$Window.ShowDialog()
