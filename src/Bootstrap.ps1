@@ -6,6 +6,14 @@
 
 #Requires -Version 5.1
 
+# Applique TLS 1.2 des le debut du processus — requis par PowerShell Gallery.
+# PowerShell 5.1 utilise TLS 1.0 par defaut, ce qui bloque Install-Module / Save-Module.
+[Net.ServicePointManager]::SecurityProtocol =
+    [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+# Force Bypass au niveau du processus (complementaire au flag de la ligne de commande)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
+
 # $PSScriptRoot = .../src/  =>  AppRoot = parent = racine du projet
 $AppRoot = if ($PSScriptRoot) {
     Split-Path -Parent $PSScriptRoot

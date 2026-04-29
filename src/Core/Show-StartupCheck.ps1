@@ -533,7 +533,10 @@ function Show-StartupCheck {
                 & $script:_SC_SetStatus $name 'ok' $script:T.SC_CacheOk
             }
             catch {
-                & $script:_SC_SetStatus $name 'error' ($script:T.SC_ErrGeneric -f $_.Exception.Message)
+                $detail = if ($_.Exception.InnerException) {
+                    "$($_.Exception.Message) — $($_.Exception.InnerException.Message)"
+                } else { $_.Exception.Message }
+                & $script:_SC_SetStatus $name 'error' ($script:T.SC_ErrGeneric -f $detail)
                 $anyError = $true
             }
         }
