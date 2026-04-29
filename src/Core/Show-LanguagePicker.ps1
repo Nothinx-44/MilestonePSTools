@@ -4,7 +4,7 @@ function Show-LanguagePicker {
     $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Milestone Toolkit v4.6"
+        Title="Milestone Toolkit"
         Width="360" SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
@@ -101,6 +101,10 @@ function Show-LanguagePicker {
         $win.Tag = 'en'
         $win.DialogResult = $true
     })
+
+    # Titre dynamique depuis la version centralisee
+    $appVer = if ($script:AppVersion) { $script:AppVersion } else { '' }
+    $win.Title = if ($appVer) { "Milestone Toolkit $appVer" } else { 'Milestone Toolkit' }
 
     [void]$win.ShowDialog()
 

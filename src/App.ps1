@@ -10,8 +10,9 @@ param(
     [string]$Lang = 'fr'
 )
 
-$script:AppRoot = $RootPath
-$script:SrcPath = Join-Path $AppRoot 'src'
+$script:AppRoot    = $RootPath
+$script:SrcPath    = Join-Path $AppRoot 'src'
+$script:AppVersion = '4.7'   # Synchronise avec Bootstrap.ps1
 
 # Chargement de la langue
 . (Join-Path $script:SrcPath "Lang/$Lang.ps1")
@@ -185,29 +186,32 @@ $script:SnapshotDate.SelectedDate = [datetime]::Today.AddDays(-1)
 $script:CancelRequested = $false
 $script:IsCancelled = { $script:CancelRequested }
 
+# Retourne @{ Ok=$true; Time=[datetime] ou $null } — type uniforme, plus de $false sentinel
 function Get-SnapshotDateTime {
-    if ($script:SnapshotMode.SelectedIndex -eq 0) { return $null }
+    if ($script:SnapshotMode.SelectedIndex -eq 0) {
+        return @{ Ok = $true; Time = $null }
+    }
 
     $date = $script:SnapshotDate.SelectedDate
     if (-not $date) {
         [System.Windows.MessageBox]::Show(
             $script:T.App_DateMissing, $script:T.App_DateTitle, 'OK', 'Warning') | Out-Null
-        return $false
+        return @{ Ok = $false; Time = $null }
     }
 
     $h = 0; $m = 0
     if (-not [int]::TryParse($script:SnapshotHour.Text, [ref]$h) -or $h -lt 0 -or $h -gt 23) {
         [System.Windows.MessageBox]::Show(
             $script:T.App_HourInvalid, $script:T.App_HourTitle, 'OK', 'Warning') | Out-Null
-        return $false
+        return @{ Ok = $false; Time = $null }
     }
     if (-not [int]::TryParse($script:SnapshotMinute.Text, [ref]$m) -or $m -lt 0 -or $m -gt 59) {
         [System.Windows.MessageBox]::Show(
             $script:T.App_MinInvalid, $script:T.App_MinTitle, 'OK', 'Warning') | Out-Null
-        return $false
+        return @{ Ok = $false; Time = $null }
     }
 
-    return $date.Date.AddHours($h).AddMinutes($m)
+    return @{ Ok = $true; Time = $date.Date.AddHours($h).AddMinutes($m) }
 }
 
 $script:ReportProgress = {
@@ -326,8 +330,9 @@ $script:SnapshotMode.Add_SelectionChanged({
 })
 
 $BtnSnapshotSelected.Add_Click({
-    $script:SnapshotTime = Get-SnapshotDateTime
-    if ($script:SnapshotTime -eq $false) { return }
+    $snap = Get-SnapshotDateTime
+    if (-not $snap.Ok) { return }
+    $script:SnapshotTime = $snap.Time
     Invoke-Action -Name $script:T.Act_SnapshotSel -Action {
         Get-SnapshotSelected -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -SnapshotTime $script:SnapshotTime
@@ -335,8 +340,9 @@ $BtnSnapshotSelected.Add_Click({
 })
 
 $BtnSnapshotAll.Add_Click({
-    $script:SnapshotTime = Get-SnapshotDateTime
-    if ($script:SnapshotTime -eq $false) { return }
+    $snap = Get-SnapshotDateTime
+    if (-not $snap.Ok) { return }
+    $script:SnapshotTime = $snap.Time
     Invoke-Action -Name $script:T.Act_SnapshotAll -Action {
         Get-SnapshotAll -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress `
@@ -345,8 +351,9 @@ $BtnSnapshotAll.Add_Click({
 })
 
 $BtnPtzSnapshot.Add_Click({
-    $script:SnapshotTime = Get-SnapshotDateTime
-    if ($script:SnapshotTime -eq $false) { return }
+    $snap = Get-SnapshotDateTime
+    if (-not $snap.Ok) { return }
+    $script:SnapshotTime = $snap.Time
     Invoke-Action -Name $script:T.Act_SnapshotPtz -Action {
         Get-PtzPresetSnapshot -Config $script:Config -Log $logCallback `
             -Cancel $script:IsCancelled -ReportProgress $script:ReportProgress `

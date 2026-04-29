@@ -1,4 +1,5 @@
-$em = [char]0x2014   # em dash, safe pour PowerShell 5.1
+$em  = [char]0x2014   # em dash, safe pour PowerShell 5.1
+$ver = if ($script:AppVersion) { $script:AppVersion } else { '4.6' }
 
 $script:T = @{
     # LANGUAGE PICKER
@@ -8,7 +9,7 @@ $script:T = @{
     LP_EN       = 'English'
 
     # STARTUP CHECK
-    SC_WindowTitle    = "Milestone Toolkit v4.6 $em Demarrage"
+    SC_WindowTitle    = "Milestone Toolkit $ver $em Demarrage"
     SC_Subtitle       = 'Verification des dependances au demarrage'
     SC_ModuleDesc     = "SDK Milestone VMS $em connexion au Management Server"
     SC_StatusWaiting  = 'En attente...'
@@ -41,7 +42,7 @@ $script:T = @{
     SC_SaveError      = 'La sauvegarde a echoue. Verifiez votre connexion Internet.'
     SC_SaveConfirm    = "Cette operation va telecharger les modules dans le dossier Dependencies/.`n`nVous pourrez ensuite copier tout le projet sur une machine sans Internet.`n`nContinuer ?"
     SC_SaveTitle      = 'Preparer pour usage offline'
-    SC_ErrTitle       = "Milestone Toolkit $em Erreur"
+    SC_ErrTitle       = "Milestone Toolkit $ver $em Erreur"
     SC_ErrCheck       = "Erreur lors de la verification :`n`n{0}"
     SC_ErrInstall     = "Erreur lors de l'installation :`n`n{0}"
     SC_ErrGeneric     = 'Erreur : {0}'
@@ -50,8 +51,8 @@ $script:T = @{
     MW_StatusConnected   = 'Connecte'
     MW_LblOutputDir      = 'DOSSIER DE SORTIE'
     MW_BtnOutputDir      = 'Changer'
-    MW_AppTitle          = 'Milestone Toolkit v4.6'
-    MW_Version           = "v4.6 $em Fork by Vincent"
+    MW_AppTitle          = "Milestone Toolkit $ver"
+    MW_Version           = "$ver $em Fork by Vincent"
     MW_LblModeCapture    = 'MODE CAPTURE'
     MW_CbiLive           = 'Live (derniere image)'
     MW_CbiHistorique     = 'Image historique'
@@ -174,6 +175,7 @@ $script:T = @{
     EH_LogSnapEmpty   = "  AVERTISSEMENT: Snapshot vide '{0}'"
     EH_LogSnapErr     = "  AVERTISSEMENT: '{0}' : {1}"
     EH_LogSnapsDone   = '{0} / {1} snapshots recuperes.'
+    EH_LogSnapTimeout = 'AVERTISSEMENT: Timeout snapshots - operation interrompue apres 10 min.'
     EH_LogBuilding    = 'Construction du fichier Excel...'
     EH_LogCancelled   = 'AVERTISSEMENT: Operation annulee apres {0} / {1} cameras.'
     EH_LogCamRow      = '[{0}/{1}] {2}'
@@ -250,6 +252,7 @@ $script:T = @{
     SA_LogError     = "  ERREUR '{0}': {1}"
     SA_LogDone      = '{0} snapshots enregistres dans : {1}'
     SA_LogDoneErr   = '{0} snapshots enregistres, {1} echecs dans : {2}'
+    SA_LogTimeout   = 'AVERTISSEMENT: Timeout - certains snapshots ne ont pas repondu (10 min depasses).'
 
     # SNAPSHOT SELECTED
     SS_LogOpening   = 'Ouverture du selecteur de camera...'
@@ -281,6 +284,8 @@ $script:T = @{
     GM_LogCancelled    = 'AVERTISSEMENT: Operation annulee apres {0} / {1} modeles.'
     GM_LogModel        = "Modele '{0}' : {1} camera(s) ajoutee(s)."
     GM_LogDone         = 'Organisation par modele terminee.'
+    GM_LogModelError   = "AVERTISSEMENT: Erreur sur le modele '{0}' : {1}"
+    LI_LogCareProp     = '  {0,-14} : {1}'
     GM_Unknown         = 'Inconnu'
     GM_ParentFolder    = 'Modele'
 

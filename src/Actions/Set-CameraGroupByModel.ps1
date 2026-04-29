@@ -32,20 +32,25 @@ function Set-CameraGroupByModel {
 
         $model = if ([string]::IsNullOrWhiteSpace($group.Name)) { $script:T.GM_Unknown } else { $group.Name }
 
-        $deviceGroup = Get-VmsDeviceGroup -ParentGroup $parentFolder -Name $model -ErrorAction SilentlyContinue
-        if (-not $deviceGroup) {
-            $deviceGroup = New-VmsDeviceGroup -ParentGroup $parentFolder -Name $model
-        }
-
-        foreach ($camera in $group.Group) {
-            $alreadyMember = Get-VmsDeviceGroupMember -Group $deviceGroup -ErrorAction SilentlyContinue |
-                Where-Object { $_.Id -eq $camera.Id }
-            if (-not $alreadyMember) {
-                Add-VmsDeviceGroupMember -Group $deviceGroup -DeviceId $camera.Id
+        try {
+            $deviceGroup = Get-VmsDeviceGroup -ParentGroup $parentFolder -Name $model -ErrorAction SilentlyContinue
+            if (-not $deviceGroup) {
+                $deviceGroup = New-VmsDeviceGroup -ParentGroup $parentFolder -Name $model -ErrorAction Stop
             }
-        }
 
-        & $Log ($script:T.GM_LogModel -f $model, $group.Count)
+            foreach ($camera in $group.Group) {
+                $alreadyMember = Get-VmsDeviceGroupMember -Group $deviceGroup -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Id -eq $camera.Id }
+                if (-not $alreadyMember) {
+                    Add-VmsDeviceGroupMember -Group $deviceGroup -DeviceId $camera.Id -ErrorAction Stop
+                }
+            }
+
+            & $Log ($script:T.GM_LogModel -f $model, $group.Count)
+        }
+        catch {
+            & $Log ($script:T.GM_LogModelError -f $model, $_.Exception.Message)
+        }
     }
 
     if (-not (& $Cancel)) { & $Log $script:T.GM_LogDone }

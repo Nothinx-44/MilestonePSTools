@@ -1,5 +1,45 @@
 # Release Notes
 
+## v4.7
+> Correctifs telechargement offline, robustesse globale et audit qualite
+
+### Corrections — telechargement offline
+- **Preparer offline** : `Save-Module` remplace par un telechargement direct via `WebClient` + `Expand-Archive`. Aucune dependance sur PowerShellGet ou NuGet provider — fonctionne sur toute installation fraiche de Windows.
+- **TLS 1.2** force des le demarrage de Bootstrap.ps1 (avant tout chargement de module).
+- Nom de fichier temp unique par run (GUID) pour eviter les conflits d'extraction entre deux tentatives consecutives.
+
+### Corrections — robustesse
+- **Fuite de ressources** : `WebClient` desormais dispose dans un bloc `try/finally`.
+- **Fuite de threads** : pool de runspaces (snapshots paralleles) ferme dans un `try/finally` dans `Get-SnapshotAll` et `Export-HardwareReport`.
+- **Timeout snapshots** : les operations de capture en parallele s'interrompent apres 10 minutes si une camera ne repond pas, au lieu de bloquer indefiniment.
+- **Get-SnapshotDateTime** : retourne desormais `@{ Ok; Time }` au lieu de trois types differents (`$null`, `$false`, `[datetime]`) — comparaisons fiables dans tous les cas.
+- **Export CSV** : `Export-Csv` entoure d'un `try/catch` dans Get-CameraStatus, Get-PlaybackReport et Get-RecordingStats — echec visible plutot que silencieux.
+- **Set-CameraGroupByModel** : `New-VmsDeviceGroup` et `Add-VmsDeviceGroupMember` dans un `try/catch` — erreur par modele loggee sans interrompre les autres.
+- **Get-LicenseInfo** : proprietes `CarePlus`/`CarePremium` utilisent desormais `$script:T` pour respecter la langue selectionnee.
+
+### Ameliorations
+- **Version centralisee** : `$script:AppVersion` defini une seule fois dans `Bootstrap.ps1` et `App.ps1`, reference partout via `$ver` dans les fichiers de langue — une seule ligne a modifier pour changer de version.
+- **Nouvelles cles de traduction** : `SA_LogTimeout`, `EH_LogSnapTimeout`, `GM_LogModelError`, `LI_LogCareProp`.
+
+---
+
+## v4.5.1
+> Packaging Inno Setup — installeur Windows natif
+
+### Nouveautes
+- **Installeur EXE** : Inno Setup compile deux variantes publiees automatiquement sur chaque release GitHub :
+  - `*-Online-Setup.exe` (~500 Ko) : leger, telecharge MilestonePSTools au premier lancement.
+  - `*-Offline-Setup.exe` (~80 Mo) : module MilestonePSTools bundle dans l'EXE, fonctionne sans Internet.
+- **Raccourci Menu Demarrer** et optionnellement Bureau. Lance l'application sans aucune fenetre console (via `Start.vbs`).
+- **Pas d'UAC requis** : installation dans `AppData\Local` par defaut. Option "Pour tous les utilisateurs" disponible pour les admins.
+- **Deblocage automatique** : `Unblock-File` applique sur tous les scripts lors de l'installation — le flag Zone.Identifier n'est plus un probleme.
+- **Mise a jour silencieuse** : reinstaller un EXE plus recent met a jour l'installation existante (meme AppId Inno Setup).
+- **Desinstallation propre** : entree dans Programmes & fonctionnalites, suppression des dossiers `Output/`, `Logs/`, `Dependencies/`.
+- **GitHub Actions** (`.github/workflows/release.yml`) : push d'un tag `vX.X` → build automatique des deux EXE → publication sur la page Releases.
+- **Build local** : `installer\build.ps1 -Mode Online` ou `-Mode Offline` pour compiler sans passer par CI.
+
+---
+
 ## v4.5
 > Support multilingue FR / EN
 

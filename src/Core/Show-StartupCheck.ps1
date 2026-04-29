@@ -587,10 +587,13 @@ function Show-StartupCheck {
                 if (Test-Path $localPath) { Remove-Item $localPath -Recurse -Force -ErrorAction SilentlyContinue }
                 New-Item $localPath -ItemType Directory -Force | Out-Null
 
-                # Telechargement via WebClient (plus simple et fiable qu'Invoke-WebRequest)
+                # Telechargement via WebClient
                 $wc = [System.Net.WebClient]::new()
-                $wc.DownloadFile("https://www.powershellgallery.com/api/v2/package/$name", $tempNupkg)
-                $wc.Dispose()
+                try {
+                    $wc.DownloadFile("https://www.powershellgallery.com/api/v2/package/$name", $tempNupkg)
+                } finally {
+                    $wc.Dispose()
+                }
 
                 # Extraction (nupkg = ZIP) — Expand-Archive -Force gere les dossiers existants
                 Expand-Archive -Path $tempNupkg -DestinationPath $tempExtract -Force -ErrorAction Stop

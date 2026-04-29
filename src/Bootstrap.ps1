@@ -6,6 +6,9 @@
 
 #Requires -Version 5.1
 
+# Version centrale — modifier ici uniquement
+$script:AppVersion = '4.7'
+
 # Applique TLS 1.2 des le debut du processus — requis par PowerShell Gallery.
 # PowerShell 5.1 utilise TLS 1.0 par defaut, ce qui bloque Install-Module / Save-Module.
 [Net.ServicePointManager]::SecurityProtocol =

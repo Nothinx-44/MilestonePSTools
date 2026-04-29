@@ -291,43 +291,56 @@ function Export-HardwareReport {
         $pool.ApartmentState = 'MTA'
         $pool.Open()
 
-        $jobs = [System.Collections.Generic.List[hashtable]]::new()
-        foreach ($cam in $camReport) {
-            $vmsCamera = $vmsCamByName[$cam.Name]
-            if (-not $vmsCamera) { continue }
-            $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
-            $filePath = Join-Path $tempDir "$safeName.jpg"
-            $ps = [PowerShell]::Create()
-            $ps.RunspacePool = $pool
-            [void]$ps.AddScript($snapScript).AddArgument($vmsCamera).AddArgument($quality).AddArgument($filePath)
-            $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
-        }
-
-        $pending  = [System.Collections.Generic.List[hashtable]]::new($jobs)
-        $received = 0
-
-        while ($pending.Count -gt 0) {
-            $completed = @($pending | Where-Object { $_.Handle.IsCompleted })
-            foreach ($job in $completed) {
-                [void]$pending.Remove($job)
-                try {
-                    $result = $job.PS.EndInvoke($job.Handle)
-                    if ($result) {
-                        $snapPaths[$job.Name] = $result
-                        $received++
-                        & $Log ($script:T.EH_LogSnapOk -f $received, $jobs.Count, $job.Name)
-                    }
-                    else { & $Log ($script:T.EH_LogSnapEmpty -f $job.Name) }
-                }
-                catch { & $Log ($script:T.EH_LogSnapErr -f $job.Name, $_) }
-                finally { $job.PS.Dispose() }
-                & $ReportProgress ($jobs.Count - $pending.Count) $jobs.Count
+        try {
+            $jobs = [System.Collections.Generic.List[hashtable]]::new()
+            foreach ($cam in $camReport) {
+                $vmsCamera = $vmsCamByName[$cam.Name]
+                if (-not $vmsCamera) { continue }
+                $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
+                $filePath = Join-Path $tempDir "$safeName.jpg"
+                $ps = [PowerShell]::Create()
+                $ps.RunspacePool = $pool
+                [void]$ps.AddScript($snapScript).AddArgument($vmsCamera).AddArgument($quality).AddArgument($filePath)
+                $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
             }
-            if ($pending.Count -gt 0) { Start-Sleep -Milliseconds 150 }
-        }
 
-        $pool.Close()
-        $pool.Dispose()
+            $pending  = [System.Collections.Generic.List[hashtable]]::new($jobs)
+            $received = 0
+            $timeout  = [datetime]::UtcNow.AddMinutes(10)
+
+            while ($pending.Count -gt 0) {
+                if ([datetime]::UtcNow -gt $timeout) {
+                    foreach ($job in @($pending)) {
+                        try { $job.PS.Stop() } catch {}
+                        $job.PS.Dispose()
+                    }
+                    $pending.Clear()
+                    & $Log $script:T.EH_LogSnapTimeout
+                    break
+                }
+                $completed = @($pending | Where-Object { $_.Handle.IsCompleted })
+                foreach ($job in $completed) {
+                    [void]$pending.Remove($job)
+                    try {
+                        $result = $job.PS.EndInvoke($job.Handle)
+                        if ($result) {
+                            $snapPaths[$job.Name] = $result
+                            $received++
+                            & $Log ($script:T.EH_LogSnapOk -f $received, $jobs.Count, $job.Name)
+                        }
+                        else { & $Log ($script:T.EH_LogSnapEmpty -f $job.Name) }
+                    }
+                    catch { & $Log ($script:T.EH_LogSnapErr -f $job.Name, $_) }
+                    finally { $job.PS.Dispose() }
+                    & $ReportProgress ($jobs.Count - $pending.Count) $jobs.Count
+                }
+                if ($pending.Count -gt 0) { Start-Sleep -Milliseconds 150 }
+            }
+        }
+        finally {
+            $pool.Close()
+            $pool.Dispose()
+        }
         & $Log ($script:T.EH_LogSnapsDone -f $snapPaths.Count, $jobs.Count)
     }
 

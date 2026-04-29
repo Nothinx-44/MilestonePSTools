@@ -64,8 +64,11 @@ function Get-PlaybackReport {
             New-Item -Path $Config.outputDirectory -ItemType Directory -Force | Out-Null
         }
         $csvPath = Join-Path $Config.outputDirectory $script:T.PR_CsvFileName
-        $rows | Export-Csv -Path $csvPath -NoTypeInformation `
-            -Encoding $Config.csvEncoding -Delimiter $Config.csvDelimiter
-        & $Log ($script:T.PR_LogExported -f $csvPath)
+        try {
+            $rows | Export-Csv -Path $csvPath -NoTypeInformation `
+                -Encoding $Config.csvEncoding -Delimiter $Config.csvDelimiter
+            & $Log ($script:T.PR_LogExported -f $csvPath)
+        }
+        catch { & $Log ("ERREUR: Export CSV : $_") }
     }
 }

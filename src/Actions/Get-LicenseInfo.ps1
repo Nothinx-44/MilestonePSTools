@@ -67,7 +67,9 @@ function Get-VmsLicenseSummary {
 
             foreach ($careProp in @('CarePlus','CarePremium')) {
                 $val = $product.$careProp
-                if ($val -and $val -ne 'N/A') { & $Log "  $careProp       : $val" }
+                if ($val -and $val -ne 'N/A') {
+                    & $Log ($script:T.LI_LogCareProp -f $careProp, $val)
+                }
             }
         }
     }

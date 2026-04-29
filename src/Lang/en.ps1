@@ -1,4 +1,5 @@
-$em = [char]0x2014   # em dash, safe for PowerShell 5.1
+$em  = [char]0x2014   # em dash, safe for PowerShell 5.1
+$ver = if ($script:AppVersion) { $script:AppVersion } else { '4.6' }
 
 $script:T = @{
     # LANGUAGE PICKER
@@ -8,7 +9,7 @@ $script:T = @{
     LP_EN       = 'English'
 
     # STARTUP CHECK
-    SC_WindowTitle    = "Milestone Toolkit v4.6 $em Startup"
+    SC_WindowTitle    = "Milestone Toolkit $ver $em Startup"
     SC_Subtitle       = 'Dependency verification at startup'
     SC_ModuleDesc     = "Milestone VMS SDK $em Management Server connection"
     SC_StatusWaiting  = 'Waiting...'
@@ -41,7 +42,7 @@ $script:T = @{
     SC_SaveError      = 'Save failed. Check your Internet connection.'
     SC_SaveConfirm    = "This operation will download modules to the Dependencies/ folder.`n`nYou can then copy the entire project to a machine without Internet.`n`nContinue?"
     SC_SaveTitle      = 'Prepare for offline use'
-    SC_ErrTitle       = "Milestone Toolkit $em Error"
+    SC_ErrTitle       = "Milestone Toolkit $ver $em Error"
     SC_ErrCheck       = "Error during verification:`n`n{0}"
     SC_ErrInstall     = "Error during installation:`n`n{0}"
     SC_ErrGeneric     = 'Error: {0}'
@@ -50,8 +51,8 @@ $script:T = @{
     MW_StatusConnected   = 'Connected'
     MW_LblOutputDir      = 'OUTPUT FOLDER'
     MW_BtnOutputDir      = 'Change'
-    MW_AppTitle          = 'Milestone Toolkit v4.6'
-    MW_Version           = "v4.6 $em Fork by Vincent"
+    MW_AppTitle          = "Milestone Toolkit $ver"
+    MW_Version           = "$ver $em Fork by Vincent"
     MW_LblModeCapture    = 'CAPTURE MODE'
     MW_CbiLive           = 'Live (latest image)'
     MW_CbiHistorique     = 'Historical image'
@@ -174,6 +175,7 @@ $script:T = @{
     EH_LogSnapEmpty   = "  WARNING: Empty snapshot '{0}'"
     EH_LogSnapErr     = "  WARNING: '{0}' : {1}"
     EH_LogSnapsDone   = '{0} / {1} snapshots retrieved.'
+    EH_LogSnapTimeout = 'WARNING: Snapshot timeout - operation interrupted after 10 min.'
     EH_LogBuilding    = 'Building Excel file...'
     EH_LogCancelled   = 'WARNING: Operation cancelled after {0} / {1} cameras.'
     EH_LogCamRow      = '[{0}/{1}] {2}'
@@ -250,6 +252,7 @@ $script:T = @{
     SA_LogError      = "  ERROR '{0}': {1}"
     SA_LogDone       = '{0} snapshots saved in: {1}'
     SA_LogDoneErr    = '{0} snapshots saved, {1} failed in: {2}'
+    SA_LogTimeout    = 'WARNING: Timeout - some snapshots did not respond (10 min exceeded).'
 
     # SNAPSHOT SELECTED
     SS_LogOpening    = 'Opening camera selector...'
@@ -281,6 +284,8 @@ $script:T = @{
     GM_LogCancelled     = 'WARNING: Operation cancelled after {0} / {1} models.'
     GM_LogModel         = "Model '{0}': {1} camera(s) added."
     GM_LogDone          = 'Organisation by model complete.'
+    GM_LogModelError    = "WARNING: Error on model '{0}': {1}"
+    LI_LogCareProp      = '  {0,-14} : {1}'
     GM_Unknown          = 'Unknown'
     GM_ParentFolder     = 'Model'
 

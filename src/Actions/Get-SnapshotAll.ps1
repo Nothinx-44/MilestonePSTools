@@ -44,44 +44,60 @@ function Get-SnapshotAll {
     $pool.ApartmentState = 'MTA'
     $pool.Open()
 
-    $jobs = [System.Collections.Generic.List[hashtable]]::new()
+    try {
+        $jobs = [System.Collections.Generic.List[hashtable]]::new()
 
-    foreach ($cam in $cameras) {
-        if (& $Cancel) { & $Log $script:T.SA_LogCancelled ; break }
-        $ps = [PowerShell]::Create()
-        $ps.RunspacePool = $pool
-        [void]$ps.AddScript($snapScript).AddArgument($cam).AddArgument($behavior).AddArgument($useTime).AddArgument($snapTime).AddArgument($quality).AddArgument($snapshotDir)
-        $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
-    }
-
-    $pending  = [System.Collections.Generic.List[hashtable]]::new($jobs)
-    $received = 0
-    $errors   = 0
-
-    while ($pending.Count -gt 0) {
-        $completed = @($pending | Where-Object { $_.Handle.IsCompleted })
-        foreach ($job in $completed) {
-            [void]$pending.Remove($job)
-            try {
-                $result = $job.PS.EndInvoke($job.Handle)
-                if ($result) {
-                    $received++
-                    & $Log ($script:T.SA_LogOk -f $received, $total, $job.Name)
-                } else {
-                    $errors++
-                    & $Log ($script:T.SA_LogFailed -f $job.Name)
-                }
-            } catch {
-                $errors++
-                & $Log ($script:T.SA_LogError -f $job.Name, $_)
-            } finally { $job.PS.Dispose() }
-            & $ReportProgress ($total - $pending.Count) $total
+        foreach ($cam in $cameras) {
+            if (& $Cancel) { & $Log $script:T.SA_LogCancelled ; break }
+            $ps = [PowerShell]::Create()
+            $ps.RunspacePool = $pool
+            [void]$ps.AddScript($snapScript).AddArgument($cam).AddArgument($behavior).AddArgument($useTime).AddArgument($snapTime).AddArgument($quality).AddArgument($snapshotDir)
+            $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
         }
-        if ($pending.Count -gt 0) { Start-Sleep -Milliseconds 150 }
-    }
 
-    $pool.Close()
-    $pool.Dispose()
+        $pending  = [System.Collections.Generic.List[hashtable]]::new($jobs)
+        $received = 0
+        $errors   = 0
+        $timeout  = [datetime]::UtcNow.AddMinutes(10)
+
+        while ($pending.Count -gt 0) {
+            # Timeout de securite : evite un blocage infini si une camera ne repond jamais
+            if ([datetime]::UtcNow -gt $timeout) {
+                foreach ($job in @($pending)) {
+                    try { $job.PS.Stop() } catch {}
+                    $job.PS.Dispose()
+                    $errors++
+                }
+                $pending.Clear()
+                & $Log $script:T.SA_LogTimeout
+                break
+            }
+
+            $completed = @($pending | Where-Object { $_.Handle.IsCompleted })
+            foreach ($job in $completed) {
+                [void]$pending.Remove($job)
+                try {
+                    $result = $job.PS.EndInvoke($job.Handle)
+                    if ($result) {
+                        $received++
+                        & $Log ($script:T.SA_LogOk -f $received, $total, $job.Name)
+                    } else {
+                        $errors++
+                        & $Log ($script:T.SA_LogFailed -f $job.Name)
+                    }
+                } catch {
+                    $errors++
+                    & $Log ($script:T.SA_LogError -f $job.Name, $_)
+                } finally { $job.PS.Dispose() }
+                & $ReportProgress ($total - $pending.Count) $total
+            }
+            if ($pending.Count -gt 0) { Start-Sleep -Milliseconds 150 }
+        }
+    }
+    finally {
+        $pool.Close()
+        $pool.Dispose()
+    }
 
     $msg = if ($errors -gt 0) { $script:T.SA_LogDoneErr -f $received, $errors, $snapshotDir }
            else                { $script:T.SA_LogDone    -f $received, $snapshotDir }
