@@ -4,7 +4,7 @@ function Show-LanguagePicker {
     $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Milestone Toolkit v4.5"
+        Title="Milestone Toolkit v4.6"
         Width="360" SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"

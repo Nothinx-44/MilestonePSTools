@@ -1,5 +1,22 @@
 # Release Notes
 
+## v4.5.1
+> Packaging Inno Setup — installeur Windows natif
+
+### Nouveautes
+- **Installeur EXE** : Inno Setup compile deux variantes publiees automatiquement sur chaque release GitHub :
+  - `*-Online-Setup.exe` (~500 Ko) : leger, telecharge MilestonePSTools au premier lancement.
+  - `*-Offline-Setup.exe` (~80 Mo) : module MilestonePSTools bundle dans l'EXE, fonctionne sans Internet.
+- **Raccourci Menu Demarrer** et optionnellement Bureau. Lance l'application sans aucune fenetre console (via `Start.vbs`).
+- **Pas d'UAC requis** : installation dans `AppData\Local` par defaut. Option "Pour tous les utilisateurs" disponible pour les admins.
+- **Deblocage automatique** : `Unblock-File` applique sur tous les scripts lors de l'installation — le flag Zone.Identifier n'est plus un probleme.
+- **Mise a jour silencieuse** : reinstaller un EXE plus recent met a jour l'installation existante (meme AppId Inno Setup).
+- **Desinstallation propre** : entree dans Programmes & fonctionnalites, suppression des dossiers `Output/`, `Logs/`, `Dependencies/`.
+- **GitHub Actions** (`.github/workflows/release.yml`) : push d'un tag `vX.X` → build automatique des deux EXE → publication sur la page Releases.
+- **Build local** : `installer\build.ps1 -Mode Online` ou `-Mode Offline` pour compiler sans passer par CI.
+
+---
+
 ## v4.5
 > Support multilingue FR / EN
 

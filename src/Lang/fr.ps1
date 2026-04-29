@@ -8,7 +8,7 @@ $script:T = @{
     LP_EN       = 'English'
 
     # STARTUP CHECK
-    SC_WindowTitle    = "Milestone Toolkit v4.5 $em Demarrage"
+    SC_WindowTitle    = "Milestone Toolkit v4.6 $em Demarrage"
     SC_Subtitle       = 'Verification des dependances au demarrage'
     SC_ModuleDesc     = "SDK Milestone VMS $em connexion au Management Server"
     SC_StatusWaiting  = 'En attente...'
@@ -50,8 +50,8 @@ $script:T = @{
     MW_StatusConnected   = 'Connecte'
     MW_LblOutputDir      = 'DOSSIER DE SORTIE'
     MW_BtnOutputDir      = 'Changer'
-    MW_AppTitle          = 'Milestone Toolkit v4.5'
-    MW_Version           = "v4.5 $em Fork by Vincent"
+    MW_AppTitle          = 'Milestone Toolkit v4.6'
+    MW_Version           = "v4.6 $em Fork by Vincent"
     MW_LblModeCapture    = 'MODE CAPTURE'
     MW_CbiLive           = 'Live (derniere image)'
     MW_CbiHistorique     = 'Image historique'

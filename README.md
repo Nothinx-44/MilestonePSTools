@@ -1,33 +1,40 @@
-# Outil d’export XProtect vers Excel (GUI MilestonePSTools)
+# Milestone Toolkit v4.6 — Fork by Vincent
 
-Outil avec interface graphique permettant d’exporter les caméras, le hardware, la rétention et les données d’enregistrement depuis Milestone XProtect vers Excel ou CSV, en s’appuyant sur le module PowerShell MilestonePSTools.
+Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
 
-## Pourquoi cet outil
+## Installation
 
-Milestone XProtect ne propose pas simplement :
-- l’export complet des caméras vers Excel
-- l’audit de la rétention d’enregistrement
-- la génération de rapports exploitables
+### Via l'installeur (recommande)
 
-Cet outil permet de :
-- gagner du temps sur les grosses installations
-- générer des rapports clairs pour les clients
-- auditer rapidement un système de vidéosurveillance
+Telecharger l'EXE depuis la page **Releases** GitHub :
+
+| Fichier | Quand l'utiliser |
+|---------|-----------------|
+| `MilestoneToolkit-vX.X-Online-Setup.exe` | Machine avec acces Internet |
+| `MilestoneToolkit-vX.X-Offline-Setup.exe` | Machine sans Internet (module inclus dans l'EXE) |
+
+L'installeur :
+- cree un raccourci dans le Menu Demarrer (et optionnellement sur le Bureau)
+- debloque automatiquement tous les scripts
+- ne necessite pas de droits administrateur (installation dans `AppData\Local`)
+
+### Via le ZIP (developpeurs)
+
+Extraire le ZIP puis double-cliquer sur **`Demarrer Milestone Toolkit.bat`**.
 
 ---
 
-# Milestone Toolkit v4.5 — Fork by Vincent
+## Mode offline (machine sans Internet)
 
-Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
-<img width="1244" height="864" alt="image" src="https://github.com/user-attachments/assets/909442eb-a8ec-4d50-b90f-e99df0070a9c" />
+Deux approches selon la situation :
 
-## Lancement
+**A. Installer sur la machine cible via l'EXE Offline**
+Telecharger `MilestoneToolkit-vX.X-Offline-Setup.exe` sur une machine avec Internet, copier l'EXE sur la machine cible, installer. Le module MilestonePSTools est inclus dans l'EXE.
 
-```powershell
-.\Launch.ps1
-```
+**B. Depuis l'application (bouton "Preparer offline")**
+Sur une machine avec Internet, lancer l'application, cliquer **Preparer offline** dans l'ecran de demarrage. Cela telecharge MilestonePSTools dans le dossier `Dependencies/`. Copier ensuite tout le dossier du projet sur la machine cible.
 
-Ou clic-droit sur `Launch.ps1` > **Executer avec PowerShell**.
+---
 
 ---
 
@@ -50,8 +57,6 @@ Toutes les actions snapshot supportent deux modes :
 | Action | Description |
 |--------|-------------|
 | **Export Hardware** | Rapport Excel configurable : fenetre de selection des colonnes a inclure (hardware, flux video, retention, snapshot). Les mots de passe sont exclus par defaut et ne s'affichent que si la colonne est explicitement cochee. |
-<img width="513" height="556" alt="image" src="https://github.com/user-attachments/assets/d8bb88fe-1b12-4ec0-b948-c56892808e2f" />
-
 | **Grouper par Modele** | Cree des groupes de cameras dans Milestone organises par modele |
 
 ### Monitoring
@@ -67,15 +72,6 @@ Toutes les actions snapshot supportent deux modes :
 |--------|-------------|
 | **Stats Enregistrement (7j)** | Statistiques d'enregistrement et de mouvement par camera sur 7 jours (CSV) |
 | **Informations Licence** | Affiche les produits licencies, dates d'expiration et canaux utilises |
-
----
-
-## Comment exporter toutes les caméras XProtect vers Excel
-
-1. Lancer l’outil
-2. Cliquer sur **Export Hardware**
-3. Sélectionner les colonnes souhaitées
-4. Exporter vers Excel
 
 ---
 
@@ -99,7 +95,6 @@ Le module est telecharge automatiquement depuis PowerShell Gallery. Aucune actio
 1. Sur une machine **avec** Internet, cliquer **Preparer offline** dans l'ecran de demarrage
 2. Copier le projet entier (avec `Dependencies/`) sur la machine cible
 3. Lancer normalement — le mode Offline est detecte automatiquement
-<img width="559" height="515" alt="image" src="https://github.com/user-attachments/assets/43cd7c30-020b-4fba-a45a-e524bd20feec" />
 
 ---
 
@@ -158,24 +153,3 @@ MilestonePSTools/
         ├── Write-ActivityLog.ps1
         └── Invoke-PtzPreset.ps1
 ```
-
----
-
-## Cas d’usage
-
-- Audit de parc caméras
-- Vérification de la rétention
-- Export client
-- Analyse de fonctionnement
-- Maintenance système
-
----
-
-## Mots-clés
-
-Milestone XProtect export Excel  
-export caméras XProtect  
-outil audit vidéosurveillance  
-MilestonePSTools GUI  
-rapport caméras sécurité  
-export hardware XProtect  
