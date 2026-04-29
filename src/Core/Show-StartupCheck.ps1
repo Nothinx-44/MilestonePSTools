@@ -418,6 +418,20 @@ function Show-StartupCheck {
         & $script:_SC_Refresh
     }
 
+    # Preparation commune : TLS 1.2 + confiance PSGallery + NuGet
+    $script:_SC_PrepareGallery = {
+        # PowerShell 5.1 utilise TLS 1.0 par defaut, PSGallery exige TLS 1.2
+        [Net.ServicePointManager]::SecurityProtocol =
+            [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+        # Marquer PSGallery comme source approuvee (evite l'erreur "untrusted repository")
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+
+        # Fournisseur NuGet requis pour Install-Module / Save-Module
+        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
+            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+    }
+
     $script:_SC_Install = {
         $script:_SC_BtnInstall.IsEnabled = $false
         $script:_SC_BtnQuit.IsEnabled    = $false
@@ -433,8 +447,7 @@ function Show-StartupCheck {
 
         $script:_SC_Status.Text = $script:T.SC_NuGet
         & $script:_SC_Refresh
-        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
-            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+        & $script:_SC_PrepareGallery
 
         foreach ($mod in $script:_SC_Modules) {
             $name = $mod.Name
@@ -445,7 +458,8 @@ function Show-StartupCheck {
             & $script:_SC_Refresh
 
             try {
-                $null = Install-Module -Name $name -Force -Scope CurrentUser `
+                $null = Install-Module -Name $name -Repository PSGallery `
+                    -Force -Scope CurrentUser `
                     -ErrorAction Stop -WarningAction SilentlyContinue
                 $installed = Get-Module -ListAvailable -Name $name -ErrorAction SilentlyContinue
                 $ver = ($installed | Sort-Object Version -Descending | Select-Object -First 1).Version
@@ -503,8 +517,7 @@ function Show-StartupCheck {
 
         $script:_SC_Status.Text = $script:T.SC_NuGet
         & $script:_SC_Refresh
-        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
-            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+        & $script:_SC_PrepareGallery
 
         foreach ($mod in $script:_SC_Modules) {
             $name = $mod.Name
@@ -515,7 +528,7 @@ function Show-StartupCheck {
             try {
                 $localPath = Join-Path $script:_SC_DepsPath $name
                 if (Test-Path $localPath) { Remove-Item $localPath -Recurse -Force }
-                $null = Save-Module -Name $name -Path $script:_SC_DepsPath `
+                Save-Module -Name $name -Path $script:_SC_DepsPath -Repository PSGallery `
                     -Force -ErrorAction Stop -WarningAction SilentlyContinue
                 & $script:_SC_SetStatus $name 'ok' $script:T.SC_CacheOk
             }
