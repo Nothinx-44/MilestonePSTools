@@ -577,14 +577,14 @@ function Show-StartupCheck {
                 # TLS 1.2 obligatoire pour PSGallery
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+                # Noms uniques pour eviter les conflits avec des runs precedents
+                $runId       = [System.Guid]::NewGuid().ToString('N').Substring(0, 8)
                 $localPath   = Join-Path $script:_SC_DepsPath $name
-                $tempNupkg   = Join-Path $env:TEMP "$name.nupkg"
-                $tempExtract = Join-Path $env:TEMP "$name.extract"
+                $tempNupkg   = Join-Path $env:TEMP "$name.$runId.zip"
+                $tempExtract = Join-Path $env:TEMP "$name.$runId.extract"
 
-                # Nettoyage prealable
-                if (Test-Path $localPath)   { Remove-Item $localPath   -Recurse -Force -ErrorAction SilentlyContinue }
-                if (Test-Path $tempExtract)  { Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue }
-                if (Test-Path $tempNupkg)    { Remove-Item $tempNupkg   -Force   -ErrorAction SilentlyContinue }
+                # Nettoyage du dossier de destination
+                if (Test-Path $localPath) { Remove-Item $localPath -Recurse -Force -ErrorAction SilentlyContinue }
                 New-Item $localPath -ItemType Directory -Force | Out-Null
 
                 # Telechargement via WebClient (plus simple et fiable qu'Invoke-WebRequest)
@@ -592,13 +592,8 @@ function Show-StartupCheck {
                 $wc.DownloadFile("https://www.powershellgallery.com/api/v2/package/$name", $tempNupkg)
                 $wc.Dispose()
 
-                if (-not (Test-Path $tempNupkg) -or (Get-Item $tempNupkg).Length -lt 1000) {
-                    throw "Le fichier telecharge est absent ou trop petit : $tempNupkg"
-                }
-
-                # Extraction (nupkg = ZIP)
-                Add-Type -AssemblyName System.IO.Compression.FileSystem
-                [System.IO.Compression.ZipFile]::ExtractToDirectory($tempNupkg, $tempExtract)
+                # Extraction (nupkg = ZIP) — Expand-Archive -Force gere les dossiers existants
+                Expand-Archive -Path $tempNupkg -DestinationPath $tempExtract -Force -ErrorAction Stop
 
                 # Copie des fichiers du module (sans les metadonnees NuGet)
                 $excludeNames = @('[Content_Types].xml')
