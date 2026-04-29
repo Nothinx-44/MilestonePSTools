@@ -23,8 +23,8 @@ Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShel
 
 ## Lancement
 
-```Demarrer Milestone Toolkit.bat
-```
+Cliquer sur Demarrer Milestone Toolkit.bat
+
 
 Ou clic-droit sur `Launch.ps1` > **Executer avec PowerShell**.
 
