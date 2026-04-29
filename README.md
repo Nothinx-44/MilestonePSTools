@@ -16,7 +16,7 @@ Cet outil permet de :
 
 ---
 
-# Milestone Toolkit v4.4 — Fork by Vincent
+# Milestone Toolkit v4.6 — Fork by Vincent
 
 Outil d'administration pour Milestone XProtect VMS, base sur le module PowerShell **MilestonePSTools**.
 <img width="1244" height="864" alt="image" src="https://github.com/user-attachments/assets/909442eb-a8ec-4d50-b90f-e99df0070a9c" />
