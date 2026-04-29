@@ -418,18 +418,70 @@ function Show-StartupCheck {
         & $script:_SC_Refresh
     }
 
-    # Preparation commune : TLS 1.2 + confiance PSGallery + NuGet
+    # Preparation pour Install-Module (bouton "Installer les dependances")
     $script:_SC_PrepareGallery = {
-        # PowerShell 5.1 utilise TLS 1.0 par defaut, PSGallery exige TLS 1.2
+        # TLS 1.2 requis par PSGallery (PS 5.1 utilise TLS 1.0 par defaut)
+        [Net.ServicePointManager]::SecurityProtocol =
+            [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        # NuGet requis pour Install-Module
+        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
+            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+    }
+
+    # Telechargement direct depuis l'API NuGet PSGallery
+    # N'utilise que Invoke-WebRequest + ZipFile .NET — aucune dependance PowerShellGet/NuGet
+    $script:_SC_DownloadModuleNuGet = {
+        param([string]$ModuleName, [string]$DestFolder)
+
+        $ProgressPreference = 'SilentlyContinue'
+
+        # TLS 1.2 obligatoire
         [Net.ServicePointManager]::SecurityProtocol =
             [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-        # Marquer PSGallery comme source approuvee (evite l'erreur "untrusted repository")
-        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+        $nupkgUrl    = "https://www.powershellgallery.com/api/v2/package/$ModuleName"
+        $tempNupkg   = Join-Path $env:TEMP "$ModuleName.nupkg"
+        $tempExtract = Join-Path $env:TEMP "$ModuleName.extracted"
 
-        # Fournisseur NuGet requis pour Install-Module / Save-Module
-        $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
-            -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+        # Etape 1 — telechargement
+        try {
+            Invoke-WebRequest -Uri $nupkgUrl -OutFile $tempNupkg -UseBasicParsing -ErrorAction Stop
+        }
+        catch {
+            throw "[Etape 1 - Telechargement] $($_.Exception.GetType().Name): $($_.Exception.Message)"
+        }
+
+        if (-not (Test-Path $tempNupkg) -or (Get-Item $tempNupkg).Length -eq 0) {
+            throw "[Etape 1] Fichier telecharge vide ou absent : $tempNupkg"
+        }
+
+        # Etape 2 — extraction ZIP
+        try {
+            if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
+            Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($tempNupkg, $tempExtract)
+        }
+        catch {
+            throw "[Etape 2 - Extraction] $($_.Exception.GetType().Name): $($_.Exception.Message)"
+        }
+
+        # Etape 3 — copie des fichiers du module (sans les metadonnees NuGet)
+        try {
+            $excludeNames = @('[Content_Types].xml')
+            $excludeExts  = @('.nuspec', '.psmdcp')
+            $excludeDirs  = @('_rels', 'package')
+            Get-ChildItem $tempExtract | Where-Object {
+                $_.Name      -notin $excludeNames -and
+                $_.Extension -notin $excludeExts  -and
+                $_.Name      -notin $excludeDirs
+            } | Copy-Item -Destination $DestFolder -Recurse -Force -ErrorAction Stop
+        }
+        catch {
+            throw "[Etape 3 - Copie] $($_.Exception.GetType().Name): $($_.Exception.Message)"
+        }
+
+        # Nettoyage
+        Remove-Item $tempNupkg, $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $script:_SC_Install = {
@@ -515,10 +567,6 @@ function Show-StartupCheck {
             New-Item -Path $script:_SC_DepsPath -ItemType Directory -Force | Out-Null
         }
 
-        $script:_SC_Status.Text = $script:T.SC_NuGet
-        & $script:_SC_Refresh
-        & $script:_SC_PrepareGallery
-
         foreach ($mod in $script:_SC_Modules) {
             $name = $mod.Name
             & $script:_SC_SetStatus $name 'installing' $script:T.SC_Saving
@@ -526,17 +574,59 @@ function Show-StartupCheck {
             & $script:_SC_Refresh
 
             try {
-                $localPath = Join-Path $script:_SC_DepsPath $name
-                if (Test-Path $localPath) { Remove-Item $localPath -Recurse -Force }
-                Save-Module -Name $name -Path $script:_SC_DepsPath -Repository PSGallery `
-                    -Force -ErrorAction Stop -WarningAction SilentlyContinue
+                # TLS 1.2 obligatoire pour PSGallery
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+                $localPath   = Join-Path $script:_SC_DepsPath $name
+                $tempNupkg   = Join-Path $env:TEMP "$name.nupkg"
+                $tempExtract = Join-Path $env:TEMP "$name.extract"
+
+                # Nettoyage prealable
+                if (Test-Path $localPath)   { Remove-Item $localPath   -Recurse -Force -ErrorAction SilentlyContinue }
+                if (Test-Path $tempExtract)  { Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue }
+                if (Test-Path $tempNupkg)    { Remove-Item $tempNupkg   -Force   -ErrorAction SilentlyContinue }
+                New-Item $localPath -ItemType Directory -Force | Out-Null
+
+                # Telechargement via WebClient (plus simple et fiable qu'Invoke-WebRequest)
+                $wc = [System.Net.WebClient]::new()
+                $wc.DownloadFile("https://www.powershellgallery.com/api/v2/package/$name", $tempNupkg)
+                $wc.Dispose()
+
+                if (-not (Test-Path $tempNupkg) -or (Get-Item $tempNupkg).Length -lt 1000) {
+                    throw "Le fichier telecharge est absent ou trop petit : $tempNupkg"
+                }
+
+                # Extraction (nupkg = ZIP)
+                Add-Type -AssemblyName System.IO.Compression.FileSystem
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($tempNupkg, $tempExtract)
+
+                # Copie des fichiers du module (sans les metadonnees NuGet)
+                $excludeNames = @('[Content_Types].xml')
+                $excludeExts  = @('.nuspec', '.psmdcp')
+                $excludeDirs  = @('_rels', 'package')
+                Get-ChildItem $tempExtract | Where-Object {
+                    $_.Name -notin $excludeNames -and
+                    $_.Extension -notin $excludeExts -and
+                    $_.Name -notin $excludeDirs
+                } | Copy-Item -Destination $localPath -Recurse -Force
+
+                # Nettoyage
+                Remove-Item $tempNupkg, $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+
                 & $script:_SC_SetStatus $name 'ok' $script:T.SC_CacheOk
             }
             catch {
-                $detail = if ($_.Exception.InnerException) {
-                    "$($_.Exception.Message) — $($_.Exception.InnerException.Message)"
-                } else { $_.Exception.Message }
-                & $script:_SC_SetStatus $name 'error' ($script:T.SC_ErrGeneric -f $detail)
+                $errMsg = "$($_.Exception.GetType().Name): $($_.Exception.Message)"
+                if ($_.Exception.InnerException) {
+                    $errMsg += " | $($_.Exception.InnerException.Message)"
+                }
+                # MessageBox pour voir l'erreur exacte
+                [System.Windows.MessageBox]::Show(
+                    $errMsg, 'Erreur SaveDeps',
+                    [System.Windows.MessageBoxButton]::OK,
+                    [System.Windows.MessageBoxImage]::Error
+                ) | Out-Null
+                & $script:_SC_SetStatus $name 'error' ($script:T.SC_ErrGeneric -f $errMsg)
                 $anyError = $true
             }
         }
