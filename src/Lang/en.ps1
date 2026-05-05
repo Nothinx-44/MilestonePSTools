@@ -49,6 +49,15 @@ $script:T = @{
     SC_ErrCheck       = "Error during verification:`n`n{0}"
     SC_ErrInstall     = "Error during installation:`n`n{0}"
     SC_ErrGeneric     = 'Error: {0}'
+    SC_AppLabel           = 'Application'
+    SC_AppVerChecking     = 'Checking...'
+    SC_AppVerUpToDate     = 'Up to date'
+    SC_AppVerNetErr       = 'Cannot check'
+    SC_AppVerAvailable    = 'v{0} available'
+    SC_AppUpdateConfirm   = "A new version is available: v{0}.`n`nDo you want to download and install the update now?"
+    SC_AppUpdateTitle     = 'Update available'
+    SC_AppUpdating        = 'Downloading update...'
+    SC_AppUpdateErr       = 'Update error: {0}'
 
     # MAIN WINDOW
     MW_StatusConnected   = 'Connected'

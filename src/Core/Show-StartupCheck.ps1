@@ -28,7 +28,7 @@ function Show-StartupCheck {
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Milestone Toolkit"
-        Width="580" Height="530"
+        Width="580" Height="620"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         Background="#1E1E2E"
@@ -144,6 +144,36 @@ function Show-StartupCheck {
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="#89D4A1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BadgeBtn" TargetType="Button">
+            <Setter Property="Background"      Value="#89B4FA"/>
+            <Setter Property="Foreground"      Value="#1E1E2E"/>
+            <Setter Property="FontSize"        Value="11"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Padding"         Value="12,6"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#B4D0FF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#7AA2F7"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.35"/>
@@ -317,10 +347,145 @@ function Show-StartupCheck {
         $script:_SC_DepRows[$name] = @{ Indicator = $indicator; Status = $lblStatus; Available = $false }
     }
 
+    # Separateur visuel avant la carte application
+    $appSep            = [System.Windows.Controls.Border]::new()
+    $appSep.Height     = 1
+    $appSep.Background = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(49,50,68))
+    $appSep.Margin     = [System.Windows.Thickness]::new(0,4,0,10)
+    [void]$script:_SC_DepsPanel.Children.Add($appSep)
+
+    # Indicateur (cercle colore)
+    $script:_SC_AppIndicator                   = [System.Windows.Shapes.Ellipse]::new()
+    $script:_SC_AppIndicator.Width             = 12
+    $script:_SC_AppIndicator.Height            = 12
+    $script:_SC_AppIndicator.Fill              = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(108,112,134))
+    $script:_SC_AppIndicator.VerticalAlignment = 'Center'
+    $script:_SC_AppIndicator.Margin            = [System.Windows.Thickness]::new(0,0,14,0)
+
+    $appLblName            = [System.Windows.Controls.TextBlock]::new()
+    $appLblName.Text       = 'Milestone Toolkit'
+    $appLblName.FontSize   = 13
+    $appLblName.FontWeight = [System.Windows.FontWeights]::SemiBold
+    $appLblName.Foreground = [System.Windows.Media.Brushes]::White
+
+    $appLblDesc            = [System.Windows.Controls.TextBlock]::new()
+    $appLblDesc.Text       = "$($script:T.SC_AppLabel) $([char]0x2014) v$($script:AppVersion)"
+    $appLblDesc.FontSize   = 11
+    $appLblDesc.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(108,112,134))
+    $appLblDesc.Margin     = [System.Windows.Thickness]::new(0,3,0,0)
+
+    $appNameStack                   = [System.Windows.Controls.StackPanel]::new()
+    $appNameStack.VerticalAlignment = 'Center'
+    [void]$appNameStack.Children.Add($appLblName)
+    [void]$appNameStack.Children.Add($appLblDesc)
+
+    $script:_SC_AppStatus                      = [System.Windows.Controls.TextBlock]::new()
+    $script:_SC_AppStatus.Text                 = $script:T.SC_AppVerChecking
+    $script:_SC_AppStatus.FontSize             = 12
+    $script:_SC_AppStatus.Foreground           = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(166,173,200))
+    $script:_SC_AppStatus.VerticalAlignment    = 'Center'
+
+    $script:_SC_AppUpdateBtn            = [System.Windows.Controls.Button]::new()
+    $script:_SC_AppUpdateBtn.Visibility = 'Collapsed'
+
+    $appRightPanel                   = [System.Windows.Controls.StackPanel]::new()
+    $appRightPanel.Orientation       = 'Horizontal'
+    $appRightPanel.VerticalAlignment = 'Center'
+    [void]$appRightPanel.Children.Add($script:_SC_AppStatus)
+    [void]$appRightPanel.Children.Add($script:_SC_AppUpdateBtn)
+
+    $appRowGrid = [System.Windows.Controls.Grid]::new()
+    $ac0 = [System.Windows.Controls.ColumnDefinition]::new(); $ac0.Width = [System.Windows.GridLength]::Auto
+    $ac1 = [System.Windows.Controls.ColumnDefinition]::new(); $ac1.Width = [System.Windows.GridLength]::new(1,[System.Windows.GridUnitType]::Star)
+    $ac2 = [System.Windows.Controls.ColumnDefinition]::new(); $ac2.Width = [System.Windows.GridLength]::Auto
+    [void]$appRowGrid.ColumnDefinitions.Add($ac0)
+    [void]$appRowGrid.ColumnDefinitions.Add($ac1)
+    [void]$appRowGrid.ColumnDefinitions.Add($ac2)
+    [System.Windows.Controls.Grid]::SetColumn($script:_SC_AppIndicator, 0)
+    [System.Windows.Controls.Grid]::SetColumn($appNameStack,             1)
+    [System.Windows.Controls.Grid]::SetColumn($appRightPanel,            2)
+    [void]$appRowGrid.Children.Add($script:_SC_AppIndicator)
+    [void]$appRowGrid.Children.Add($appNameStack)
+    [void]$appRowGrid.Children.Add($appRightPanel)
+
+    $appCard              = [System.Windows.Controls.Border]::new()
+    $appCard.Background   = [System.Windows.Media.SolidColorBrush]::new(
+        [System.Windows.Media.Color]::FromRgb(24,24,37))
+    $appCard.CornerRadius = [System.Windows.CornerRadius]::new(8)
+    $appCard.Padding      = [System.Windows.Thickness]::new(16,14,16,14)
+    $appCard.Child        = $appRowGrid
+    [void]$script:_SC_DepsPanel.Children.Add($appCard)
+
+    $script:_SC_AppRelease = $null
+
     $script:_SC_Refresh = {
         $script:_SC_Win.Dispatcher.Invoke(
             [System.Windows.Threading.DispatcherPriority]::Render, [Action]{}
         )
+    }
+
+    # Style applique apres creation de la fenetre (ressource XAML disponible a ce stade)
+    $script:_SC_AppUpdateBtn.Style = $script:_SC_Win.FindResource('BadgeBtn')
+
+    $script:_SC_CheckAppUpdate = {
+        $cfgPath = Join-Path $script:_SC_AppRoot 'config.json'
+        $cfg = $null
+        if (Test-Path $cfgPath) {
+            try { $cfg = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+        }
+        if (-not $cfg -or -not $cfg.autoUpdate -or -not $cfg.autoUpdate.repo) {
+            $script:_SC_AppStatus.Text = $script:T.SC_AppVerNetErr
+            & $script:_SC_Refresh
+            return
+        }
+
+        try {
+            [Net.ServicePointManager]::SecurityProtocol =
+                [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+            $headers = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
+            $release = Invoke-RestMethod `
+                -Uri "https://api.github.com/repos/$($cfg.autoUpdate.repo)/releases/latest" `
+                -Headers $headers -ErrorAction Stop
+        }
+        catch {
+            $script:_SC_AppStatus.Text = $script:T.SC_AppVerNetErr
+            $script:_SC_AppIndicator.Fill = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(108,112,134))
+            & $script:_SC_Refresh
+            return
+        }
+
+        $remoteClean  = $release.tag_name -replace '^v',''
+        $currentClean = "$($script:AppVersion)"  -replace '^v',''
+        $remote  = try { [version]$remoteClean  } catch { $null }
+        $current = try { [version]$currentClean } catch { $null }
+
+        if (-not $remote -or -not $current) {
+            $script:_SC_AppStatus.Text = $script:T.SC_AppVerNetErr
+            & $script:_SC_Refresh
+            return
+        }
+
+        if ($remote -le $current) {
+            $script:_SC_AppStatus.Text      = $script:T.SC_AppVerUpToDate
+            $script:_SC_AppStatus.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(166,227,161))
+            $script:_SC_AppIndicator.Fill   = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(166,227,161))
+        }
+        else {
+            $script:_SC_AppRelease              = $release
+            $script:_SC_AppStatus.Visibility    = 'Collapsed'
+            $script:_SC_AppUpdateBtn.Content    = $script:T.SC_AppVerAvailable -f $release.tag_name
+            $script:_SC_AppUpdateBtn.Visibility = 'Visible'
+            $script:_SC_AppIndicator.Fill       = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(137,180,250))
+        }
+        & $script:_SC_Refresh
     }
 
     $script:_SC_SetStatus = {
@@ -665,6 +830,11 @@ function Show-StartupCheck {
                 ($script:T.SC_ErrCheck -f $_), $script:T.SC_ErrTitle, 'OK', 'Error'
             ) | Out-Null
         }
+        # Verification de mise a jour differee (apres rendu complet de la fenetre)
+        $script:_SC_Win.Dispatcher.BeginInvoke(
+            [System.Windows.Threading.DispatcherPriority]::ContextIdle,
+            [Action]{ try { & $script:_SC_CheckAppUpdate } catch {} }
+        ) | Out-Null
     })
 
     $script:_SC_BtnInstall.Add_Click({
@@ -696,6 +866,78 @@ function Show-StartupCheck {
     $script:_SC_BtnQuit.Add_Click({
         $script:_SC_Result = $false
         $script:_SC_Win.Close()
+    })
+
+    $script:_SC_AppUpdateBtn.Add_Click({
+        $release = $script:_SC_AppRelease
+        if (-not $release) { return }
+
+        $confirm = [System.Windows.MessageBox]::Show(
+            ($script:T.SC_AppUpdateConfirm -f $release.tag_name),
+            $script:T.SC_AppUpdateTitle,
+            'YesNo', 'Question'
+        )
+        if ($confirm -ne 'Yes') { return }
+
+        $script:_SC_AppUpdateBtn.IsEnabled = $false
+        $script:_SC_AppStatus.Visibility   = 'Visible'
+        $script:_SC_AppStatus.Foreground   = [System.Windows.Media.SolidColorBrush]::new(
+            [System.Windows.Media.Color]::FromRgb(166,173,200))
+        $script:_SC_AppStatus.Text         = $script:T.SC_AppUpdating
+        & $script:_SC_Refresh
+
+        try {
+            $tempDir = Join-Path $env:TEMP ("MilestoneToolkitUpdate_{0}" -f [guid]::NewGuid())
+            $zipPath = Join-Path $tempDir 'release.zip'
+            $extract = Join-Path $tempDir 'extract'
+            New-Item -Path $tempDir,$extract -ItemType Directory -Force | Out-Null
+
+            $dlHeaders = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
+            Invoke-WebRequest -Uri $release.zipball_url -OutFile $zipPath `
+                -Headers $dlHeaders -UseBasicParsing -ErrorAction Stop
+
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extract)
+
+            $srcRoot = Get-ChildItem -Path $extract | Where-Object PSIsContainer | Select-Object -First 1
+            if (-not $srcRoot) { throw 'Archive vide ou structure inattendue.' }
+
+            $updaterPath = Join-Path $tempDir 'Updater.ps1'
+            $batPath     = Join-Path $script:_SC_AppRoot 'Demarrer Milestone Toolkit.bat'
+            $updaterContent = @'
+param([string]$Target, [string]$Source, [string]$Launcher)
+Start-Sleep -Seconds 2
+for ($i = 0; $i -lt 20; $i++) {
+    try { Get-ChildItem -Path $Target -ErrorAction Stop | Out-Null; break }
+    catch { Start-Sleep -Milliseconds 250 }
+}
+try { Copy-Item -Path (Join-Path $Source '*') -Destination $Target -Recurse -Force -ErrorAction Stop } catch {}
+if (Test-Path $Launcher) { Start-Process -FilePath $Launcher }
+'@
+            Set-Content -Path $updaterPath -Value $updaterContent -Encoding UTF8
+
+            $ps = (Get-Command powershell -ErrorAction SilentlyContinue).Source
+            if (-not $ps) { $ps = 'powershell.exe' }
+            Start-Process -FilePath $ps `
+                -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                              "`"$updaterPath`"",
+                              "`"$($script:_SC_AppRoot)`"",
+                              "`"$($srcRoot.FullName)`"",
+                              "`"$batPath`"" `
+                -WindowStyle Hidden
+
+            $script:_SC_Result = $false
+            $script:_SC_Win.Close()
+            exit 0
+        }
+        catch {
+            $script:_SC_AppStatus.Text       = $script:T.SC_AppUpdateErr -f $_.Exception.Message
+            $script:_SC_AppStatus.Foreground  = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(243,139,168))
+            $script:_SC_AppStatus.Visibility  = 'Visible'
+            $script:_SC_AppUpdateBtn.IsEnabled = $true
+            & $script:_SC_Refresh
+        }
     })
 
     [void]$script:_SC_Win.ShowDialog()

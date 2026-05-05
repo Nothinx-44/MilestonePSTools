@@ -7,7 +7,7 @@
 #Requires -Version 5.1
 
 # Version centrale — modifier ici uniquement
-$script:AppVersion = '4.7.1'
+$script:AppVersion = '4.7.1.1'
 
 # Applique TLS 1.2 des le debut du processus — requis par PowerShell Gallery.
 # PowerShell 5.1 utilise TLS 1.0 par defaut, ce qui bloque Install-Module / Save-Module.
@@ -68,8 +68,9 @@ function Invoke-AutoUpdate {
     if (-not $remoteVersion -or -not $currentVersion) { return }
     if ($remoteVersion -le $currentVersion) { return }
 
-    $message = "Une nouvelle version est disponible : v$($release.tag_name). Voulez-vous mettre à jour maintenant ?"
-    $caption = 'Milestone Toolkit - Mise à jour disponible'
+    $a = [char]0x00E0  # a grave (a) — encodage independant du systeme
+    $message = "Une nouvelle version est disponible : v$($release.tag_name). Voulez-vous mettre $a jour maintenant ?"
+    $caption = "Milestone Toolkit - Mise $a jour disponible"
     $result = [System.Windows.Forms.MessageBox]::Show($message, $caption, [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
     if ($result -ne [System.Windows.Forms.DialogResult]::Yes) { return }
 
@@ -123,14 +124,7 @@ Start-Process -FilePath $args[2]
     }
 }
 
-$configPath = Join-Path $AppRoot 'config.json'
-if (Test-Path $configPath) {
-    try { $configRaw = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $configRaw = $null }
-} else { $configRaw = $null }
-
-if ($configRaw -and $configRaw.autoUpdate -and $configRaw.autoUpdate.enabled -and $configRaw.autoUpdate.repo) {
-    Invoke-AutoUpdate -Repository $configRaw.autoUpdate.repo -AppRoot $AppRoot
-}
+# La verification de mise a jour est geree dans Show-StartupCheck (fenetre des dependances)
 
 Add-Type -Name ConsoleHider -Namespace '' -MemberDefinition @'
     [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
