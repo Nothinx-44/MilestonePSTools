@@ -349,12 +349,87 @@ function Export-HardwareReport {
     }
     $xlsxPath = Join-Path $Config.outputDirectory $script:T.XL_FileName
 
+    function Try-LoadImportExcel {
+        if (Get-Module -ListAvailable -Name ImportExcel) {
+            try {
+                Import-Module ImportExcel -Force -ErrorAction Stop
+                return $true
+            }
+            catch {}
+        }
+
+        try {
+            Install-Module -Name ImportExcel -Force -Scope CurrentUser -ErrorAction Stop
+            Import-Module ImportExcel -Force -ErrorAction Stop
+            return $true
+        }
+        catch {
+            return $false
+        }
+    }
+
     $excel = $null
+    $useImportExcel = $false
     try {
         $excel = New-Object -ComObject Excel.Application -ErrorAction Stop
     }
     catch {
         & $Log $script:T.EH_LogNoExcel
+        if (Try-LoadImportExcel) {
+            & $Log $script:T.EH_LogExcelFallback
+            if ($includeSnapshots) {
+                & $Log $script:T.EH_LogSnapshotsUnsupported
+                $activeColumns = $activeColumns | Where-Object { $_.Name -ne 'Snapshot' }
+            }
+
+            if ($activeColumns.Count -eq 0) {
+                & $Log $script:T.EH_LogNoExcelNoData
+                if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
+                return
+            }
+
+            $rows = @()
+            foreach ($cam in $camReport) {
+                $row = [ordered]@{}
+                $ip = if ($cam.Address -match '([0-9]{1,3}(?:\.[0-9]{1,3}){3})') { $Matches[1] } else { $cam.Address }
+                $si         = $streamLookup[$cam.Name]
+                $recStream  = if ($si) { $si.Rec  } else { $null }
+                $liveStream = if ($si) { $si.Live } else { $null }
+                $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
+                $ret        = if ($retentionLookup.ContainsKey($cam.Name)) { $retentionLookup[$cam.Name] } else { 'N/A' }
+
+                foreach ($col in $activeColumns) {
+                    $value = switch ($col.Name) {
+                        'Nom'             { $cam.Name }
+                        'Fabricant'       { $cam.DriverFamily }
+                        'Modele'          { $cam.Model }
+                        'IP'              { $ip }
+                        'MAC'             { $cam.MAC }
+                        'Firmware'        { $cam.Firmware }
+                        'ServeurRec'      { $cam.RecorderName }
+                        'Utilisateur'     { $cam.Username }
+                        'MotDePasse'      { if ($includePassword) { $cam.Password } else { '' } }
+                        'CodecEnreg'      { Get-StreamSetting $recStream 'Codec' }
+                        'ResolutionEnreg' { Get-StreamSetting $recStream 'Resolution' }
+                        'FPSEnreg'        { Get-StreamSetting $recStream 'FPS' }
+                        'CodecLive'       { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' } }
+                        'ResolutionLive'  { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' } }
+                        'FPSLive'         { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' } }
+                        'FluxSupp'        { if ($si -and $si.Extra -gt 0) { $script:T.XL_ExtraFlux -f $si.Extra } else { '' } }
+                        'Retention'       { $ret }
+                        default           { '' }
+                    }
+                    $row[$col.Header] = $value
+                }
+                $rows += [pscustomobject]$row
+            }
+
+            Export-Excel -Path $xlsxPath -WorksheetName $script:T.XL_SheetName -AutoSize -BoldTopRow -TableName 'Cameras' -ClearSheet
+            & $Log ($script:T.EH_LogSaved -f $xlsxPath)
+            if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
+            return
+        }
+
         if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
         return
     }

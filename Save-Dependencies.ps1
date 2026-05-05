@@ -28,6 +28,7 @@ if (-not (Test-Path $depPath)) {
 
 $modules = @(
     'MilestonePSTools'
+    'ImportExcel'
 )
 
 Write-Host '============================================' -ForegroundColor Cyan

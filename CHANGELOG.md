@@ -1,5 +1,23 @@
 # Release Notes
 
+## v4.7.1
+> Correctifs de compatibilite PSTools et export Excel sans Office
+
+### Corrections
+- Détection de `MilestonePSTools` améliorée : l'application prévient maintenant l'utilisateur si une version déjà installée est présente et indique si une mise à jour est disponible.
+- L'outil inclut désormais `ImportExcel` comme dépendance de base.
+- Export Hardware : si Excel n'est pas installé, l'application tente désormais d'utiliser le module PowerShell `ImportExcel` pour produire le fichier `.xlsx`.
+- Export sans Excel : les snapshots ne sont plus inclus dans l'export en fallback `ImportExcel`, afin d'éviter des erreurs de génération.
+
+### Ameliorations
+- Ajout d'une vérification de mise à jour GitHub au démarrage via `config.json`.
+- `ImportExcel` est pris en charge comme module optionnel et installé automatiquement si nécessaire.
+- Messages de fallback et d'erreur clarifiés dans l'UI et le journal.
+
+## v4.7
+- `ImportExcel` est pris en charge comme module optionnel et installé automatiquement si nécessaire.
+- Messages de fallback et d'erreur clarifiés dans l'UI et le journal.
+
 ## v4.7
 > Correctifs telechargement offline, robustesse globale et audit qualite
 

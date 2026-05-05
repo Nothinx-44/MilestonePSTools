@@ -2,5 +2,9 @@
     "outputDirectory": "./Output",
     "snapshotQuality": 95,
     "csvDelimiter": ";",
-    "csvEncoding": "UTF8"
+    "csvEncoding": "UTF8",
+    "autoUpdate": {
+        "enabled": true,
+        "repo": "Nothinx-44/XProtect-Export-Tool-to-Excel-MilestonePSTools-GUI-"
+    }
 }

@@ -7,7 +7,7 @@
 #Requires -Version 5.1
 
 # Version centrale — modifier ici uniquement
-$script:AppVersion = '4.7'
+$script:AppVersion = '4.7.1'
 
 # Applique TLS 1.2 des le debut du processus — requis par PowerShell Gallery.
 # PowerShell 5.1 utilise TLS 1.0 par defaut, ce qui bloque Install-Module / Save-Module.
@@ -22,6 +22,114 @@ $AppRoot = if ($PSScriptRoot) {
     Split-Path -Parent $PSScriptRoot
 } else {
     Split-Path -Parent ([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
+}
+
+function Get-GitHubLatestRelease {
+    param(
+        [Parameter(Mandatory)] [string]$Repository
+    )
+
+    try {
+        $headers = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
+        return Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers $headers -ErrorAction Stop
+    }
+    catch {
+        return $null
+    }
+}
+
+function Get-ComparableVersion {
+    param([string]$VersionString)
+
+    if (-not $VersionString) { return $null }
+    $clean = $VersionString.Trim()
+    if ($clean.StartsWith('v')) { $clean = $clean.Substring(1) }
+    try {
+        return [version]$clean
+    }
+    catch {
+        return $null
+    }
+}
+
+function Invoke-AutoUpdate {
+    param(
+        [Parameter(Mandatory)] [string]$Repository,
+        [Parameter(Mandatory)] [string]$AppRoot
+    )
+
+    Add-Type -AssemblyName System.Windows.Forms
+
+    $release = Get-GitHubLatestRelease -Repository $Repository
+    if (-not $release) { return }
+
+    $remoteVersion = Get-ComparableVersion -VersionString $release.tag_name
+    $currentVersion = Get-ComparableVersion -VersionString $script:AppVersion
+    if (-not $remoteVersion -or -not $currentVersion) { return }
+    if ($remoteVersion -le $currentVersion) { return }
+
+    $message = "Une nouvelle version est disponible : v$($release.tag_name). Voulez-vous mettre à jour maintenant ?"
+    $caption = 'Milestone Toolkit - Mise à jour disponible'
+    $result = [System.Windows.Forms.MessageBox]::Show($message, $caption, [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+    if ($result -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+
+    $tempDir = Join-Path $env:TEMP ("MilestoneToolkitUpdate_{0}" -f ([guid]::NewGuid()))
+    $zipPath  = Join-Path $tempDir 'release.zip'
+    $extract  = Join-Path $tempDir 'extract'
+    New-Item -Path $tempDir -ItemType Directory -Force | Out-Null
+    New-Item -Path $extract -ItemType Directory -Force | Out-Null
+
+    try {
+        $headers = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
+        Invoke-WebRequest -Uri $release.zipball_url -OutFile $zipPath -Headers $headers -UseBasicParsing -ErrorAction Stop
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extract)
+
+        $srcRoot = Get-ChildItem -Path $extract | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+        if (-not $srcRoot) { return }
+
+        $updaterScript = Join-Path $tempDir 'Update-Tool.ps1'
+        $batPath = Join-Path $AppRoot 'Demarrer Milestone Toolkit.bat'
+        $scriptContent = @"
+param(
+    [string]
+    [string]
+    [string]
+)
+Start-Sleep -Seconds 2
+for ($i = 0; $i -lt 20; $i++) {
+    try {
+        Get-ChildItem -Path $args[0] -ErrorAction Stop | Out-Null
+        break
+    }
+    catch {
+        Start-Sleep -Milliseconds 250
+    }
+}
+try {
+    Copy-Item -Path (Join-Path $args[1] '*') -Destination $args[0] -Recurse -Force -ErrorAction Stop
+}
+catch {
+}
+Start-Process -FilePath $args[2]
+"@
+        Set-Content -Path $updaterScript -Value $scriptContent -Encoding UTF8
+
+        Start-Process -FilePath (Get-Command powershell).Source -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$updaterScript`"","`"$AppRoot`"","`"$($srcRoot.FullName)`"","`"$batPath`"" -WindowStyle Hidden
+        exit 0
+    }
+    catch {
+        return
+    }
+}
+
+$configPath = Join-Path $AppRoot 'config.json'
+if (Test-Path $configPath) {
+    try { $configRaw = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $configRaw = $null }
+} else { $configRaw = $null }
+
+if ($configRaw -and $configRaw.autoUpdate -and $configRaw.autoUpdate.enabled -and $configRaw.autoUpdate.repo) {
+    Invoke-AutoUpdate -Repository $configRaw.autoUpdate.repo -AppRoot $AppRoot
 }
 
 Add-Type -Name ConsoleHider -Namespace '' -MemberDefinition @'

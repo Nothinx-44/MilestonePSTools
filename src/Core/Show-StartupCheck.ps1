@@ -20,7 +20,8 @@ function Show-StartupCheck {
     $script:_SC_IsOffline   = Test-Path $script:_SC_DepsPath
     $script:_SC_DepRows     = @{}
     $script:_SC_Modules     = @(
-        @{ Name = 'MilestonePSTools'; Description = $script:T.SC_ModuleDesc }
+        @{ Name = 'MilestonePSTools'; Required = $true; Description = $script:T.SC_ModuleDesc }
+        @{ Name = 'ImportExcel';    Required = $true; Description = $script:T.SC_ModuleExcelDesc }
     )
 
     $xaml = @'
@@ -395,12 +396,21 @@ function Show-StartupCheck {
             $script:_SC_BtnSaveDeps.Visibility      = 'Visible'
         }
 
-        if ($allOk) {
+        $anyUpdate = $script:_SC_Modules | Where-Object { $_.UpdateAvailable }
+
+        if ($allOk -and -not $anyUpdate) {
             $script:_SC_BtnLaunch.IsEnabled   = $true
             $script:_SC_BtnInstall.Visibility = 'Collapsed'
             $script:_SC_Status.Text = $script:T.SC_AllOk
             $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
                 [System.Windows.Media.Color]::FromRgb(166,227,161))
+        }
+        elseif ($allOk -and $anyUpdate -and -not $script:_SC_IsOffline) {
+            $script:_SC_BtnLaunch.IsEnabled   = $true
+            $script:_SC_BtnInstall.Visibility = 'Visible'
+            $script:_SC_Status.Text = $script:T.SC_UpdateAvailableSummary
+            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(249,168,37))
         }
         elseif ($script:_SC_IsOffline) {
             $script:_SC_BtnInstall.Visibility = 'Collapsed'

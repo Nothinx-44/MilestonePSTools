@@ -25,16 +25,44 @@ function Initialize-RequiredModules {
     )
 
     $modules = @(
-        @{ Name = 'MilestonePSTools' }
+        @{ Name = 'MilestonePSTools'; Required = $true }
+        @{ Name = 'ImportExcel';    Required = $true }
     )
 
     foreach ($mod in $modules) {
-        $name = $mod.Name
+        $name     = $mod.Name
+        $required = $mod.Required -ne $false
         $importedFromLocal = $false
 
         # --- Tentative de chargement depuis le dossier Dependencies/ ---
         if ($DependenciesPath -and (Test-Path $DependenciesPath)) {
             $localModulePath = Join-Path $DependenciesPath $name
+            $archivePath     = Join-Path $DependenciesPath "$name.nupkg"
+
+            if (-not (Test-Path $localModulePath) -and (Test-Path $archivePath)) {
+                & $Log "Extraction du module local $name depuis $name.nupkg..."
+                try {
+                    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+                    $tempExtract = Join-Path $env:TEMP "$name.extract"
+                    if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue }
+                    [System.IO.Compression.ZipFile]::ExtractToDirectory($archivePath, $tempExtract)
+
+                    if (-not (Test-Path $localModulePath)) { New-Item -ItemType Directory -Path $localModulePath -Force | Out-Null }
+                    $children = Get-ChildItem -Path $tempExtract
+                    if (($children.Count -eq 1) -and ($children[0].PSIsContainer)) {
+                        Copy-Item -Path (Join-Path $tempExtract $children[0].Name)\* -Destination $localModulePath -Recurse -Force
+                    }
+                    else {
+                        Copy-Item -Path (Join-Path $tempExtract '*') -Destination $localModulePath -Recurse -Force
+                    }
+                    Remove-Item $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+                    & $Log "Archive $name.nupkg extraite vers $localModulePath."
+                }
+                catch {
+                    & $Log "AVERTISSEMENT: Echec de l'extraction de $archivePath : $_"
+                }
+            }
+
             if (Test-Path $localModulePath) {
                 & $Log "Chargement de $name depuis Dependencies/..."
                 try {
@@ -60,11 +88,15 @@ function Initialize-RequiredModules {
                 continue
             }
 
+            if (-not $required) {
+                & $Log "AVERTISSEMENT: Module optionnel '$name' introuvable. Certaines fonctions Excel sans Office seront desactivees."
+                continue
+            }
+
             throw ("Module '$name' introuvable. En mode Offline, placez le module dans " +
                    "le dossier Dependencies/ avec : .\Save-Dependencies.ps1")
         }
 
-        # --- Mode Online : installer depuis PSGallery si absent ---
         if (-not (Get-Module -ListAvailable -Name $name)) {
             & $Log "Installation de $name depuis PowerShell Gallery..."
             try {
@@ -72,6 +104,10 @@ function Initialize-RequiredModules {
                 & $Log "Module $name installe."
             }
             catch {
+                if (-not $required) {
+                    & $Log "AVERTISSEMENT: Impossible d'installer le module optionnel '$name': $_"
+                    continue
+                }
                 throw "Impossible d'installer le module '$name': $_"
             }
         }
@@ -79,11 +115,23 @@ function Initialize-RequiredModules {
             & $Log "Module $name deja disponible."
         }
 
+        if (-not (Get-Module -ListAvailable -Name $name)) {
+            if (-not $required) {
+                & $Log "AVERTISSEMENT: Module optionnel '$name' introuvable. Certaines fonctions Excel sans Office seront desactivees."
+                continue
+            }
+            throw "Module '$name' introuvable apres installation."
+        }
+
         try {
             Import-Module -Name $name -Force -ErrorAction Stop
             & $Log "Module $name importe."
         }
         catch {
+            if (-not $required) {
+                & $Log "AVERTISSEMENT: Impossible d'importer le module optionnel '$name': $_"
+                continue
+            }
             throw "Impossible d'importer le module '$name': $_"
         }
     }
