@@ -424,7 +424,7 @@ function Export-HardwareReport {
                 $rows += [pscustomobject]$row
             }
 
-            Export-Excel -Path $xlsxPath -WorksheetName $script:T.XL_SheetName -AutoSize -BoldTopRow -TableName 'Cameras' -ClearSheet
+            $rows | Export-Excel -Path $xlsxPath -WorksheetName $script:T.XL_SheetName -AutoSize -BoldTopRow -TableName 'Cameras' -ClearSheet
             & $Log ($script:T.EH_LogSaved -f $xlsxPath)
             if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
             return

@@ -12,7 +12,7 @@ param(
 
 $script:AppRoot    = $RootPath
 $script:SrcPath    = Join-Path $AppRoot 'src'
-$script:AppVersion = '4.7.1.4'  # Synchronise avec Bootstrap.ps1
+$script:AppVersion = '4.8'  # Synchronise avec Bootstrap.ps1
 
 # Chargement de la langue
 . (Join-Path $script:SrcPath "Lang/$Lang.ps1")
