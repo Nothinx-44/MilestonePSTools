@@ -25,9 +25,12 @@ function Get-SnapshotAll {
     $useTime  = [bool]$SnapshotTime
     $snapTime = $SnapshotTime
 
+    $milestonePath = (Get-Module MilestonePSTools -ErrorAction SilentlyContinue).ModuleBase
+
     $snapScript = {
-        param($camera, $behavior, $useTime, $snapTime, $quality, $dir)
+        param($camera, $behavior, $useTime, $snapTime, $quality, $dir, $milestonePath)
         try {
+            if ($milestonePath) { Import-Module $milestonePath -Force -ErrorAction Stop }
             if ($useTime) {
                 $camera | Get-Snapshot -UseFriendlyName -Behavior $behavior `
                     -Time $snapTime -Quality $quality -Save -Path $dir
@@ -51,7 +54,7 @@ function Get-SnapshotAll {
             if (& $Cancel) { & $Log $script:T.SA_LogCancelled ; break }
             $ps = [PowerShell]::Create()
             $ps.RunspacePool = $pool
-            [void]$ps.AddScript($snapScript).AddArgument($cam).AddArgument($behavior).AddArgument($useTime).AddArgument($snapTime).AddArgument($quality).AddArgument($snapshotDir)
+            [void]$ps.AddScript($snapScript).AddArgument($cam).AddArgument($behavior).AddArgument($useTime).AddArgument($snapTime).AddArgument($quality).AddArgument($snapshotDir).AddArgument($milestonePath)
             $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
         }
 

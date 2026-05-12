@@ -274,9 +274,12 @@ function Export-HardwareReport {
         $tempDir = Join-Path $env:TEMP "MilestoneHW_$(Get-Random)"
         New-Item $tempDir -ItemType Directory -Force | Out-Null
 
+        $milestonePath = (Get-Module MilestonePSTools -ErrorAction SilentlyContinue).ModuleBase
+
         $snapScript = {
-            param($camera, $quality, $filePath)
+            param($camera, $quality, $filePath, $milestonePath)
             try {
+                if ($milestonePath) { Import-Module $milestonePath -Force -ErrorAction Stop }
                 $snap = $camera | Get-Snapshot -Behavior GetEnd -Quality $quality -ErrorAction Stop
                 if ($snap -and $snap.Bytes -and $snap.Bytes.Length -gt 0) {
                     [System.IO.File]::WriteAllBytes($filePath, $snap.Bytes)
@@ -300,7 +303,7 @@ function Export-HardwareReport {
                 $filePath = Join-Path $tempDir "$safeName.jpg"
                 $ps = [PowerShell]::Create()
                 $ps.RunspacePool = $pool
-                [void]$ps.AddScript($snapScript).AddArgument($vmsCamera).AddArgument($quality).AddArgument($filePath)
+                [void]$ps.AddScript($snapScript).AddArgument($vmsCamera).AddArgument($quality).AddArgument($filePath).AddArgument($milestonePath)
                 $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
             }
 
@@ -322,7 +325,7 @@ function Export-HardwareReport {
                 foreach ($job in $completed) {
                     [void]$pending.Remove($job)
                     try {
-                        $result = $job.PS.EndInvoke($job.Handle)
+                        $result = [string]($job.PS.EndInvoke($job.Handle) | Select-Object -First 1)
                         if ($result) {
                             $snapPaths[$job.Name] = $result
                             $received++
@@ -350,6 +353,11 @@ function Export-HardwareReport {
     $xlsxPath = Join-Path $Config.outputDirectory $script:T.XL_FileName
 
     function Try-LoadImportExcel {
+        # Module already imported in this session (e.g. loaded from Dependencies/ at startup)
+        if (Get-Module -Name ImportExcel) {
+            return $true
+        }
+
         if (Get-Module -ListAvailable -Name ImportExcel) {
             try {
                 Import-Module ImportExcel -Force -ErrorAction Stop
@@ -377,10 +385,6 @@ function Export-HardwareReport {
         & $Log $script:T.EH_LogNoExcel
         if (Try-LoadImportExcel) {
             & $Log $script:T.EH_LogExcelFallback
-            if ($includeSnapshots) {
-                & $Log $script:T.EH_LogSnapshotsUnsupported
-                $activeColumns = $activeColumns | Where-Object { $_.Name -ne 'Snapshot' }
-            }
 
             if ($activeColumns.Count -eq 0) {
                 & $Log $script:T.EH_LogNoExcelNoData
@@ -424,12 +428,46 @@ function Export-HardwareReport {
                 $rows += [pscustomobject]$row
             }
 
-            $rows | Export-Excel -Path $xlsxPath -WorksheetName $script:T.XL_SheetName -AutoSize -BoldTopRow -TableName 'Cameras' -ClearSheet
+            $pkg = $rows | Export-Excel -Path $xlsxPath -WorksheetName $script:T.XL_SheetName -AutoSize -BoldTopRow -TableName 'Cameras' -ClearSheet -PassThru
+
+            if ($snapColIndex -gt 0) {
+                Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue
+                $ws = $pkg.Workbook.Worksheets[$script:T.XL_SheetName]
+                $ws.Column($snapColIndex).Width = 28
+                $epSnapCol = $snapColIndex - 1  # SetPosition : colonne 0-basee
+
+                # 28 chars * 7 px/char = 196 px  |  90 pts * 4/3 = 120 px
+                $cellW = 194
+                $cellH = 118
+
+                for ($i = 0; $i -lt $camReport.Count; $i++) {
+                    $wsRow = $i + 2  # row 1 = entete, row 2 = premiere camera
+                    $ws.Row($wsRow).Height = 90
+
+                    $snapFile = $snapPaths[$camReport[$i].Name]
+                    if ($snapFile -and (Test-Path $snapFile)) {
+                        try {
+                            $img = [System.Drawing.Image]::FromFile($snapFile)
+                            try {
+                                $pic = $ws.Drawings.AddPicture(([guid]::NewGuid().ToString()), $img)
+                                $pic.SetPosition($wsRow - 1, 1, $epSnapCol, 1)
+                                $pic.SetSize($cellW, $cellH)
+                            }
+                            finally { $img.Dispose() }
+                        }
+                        catch { & $Log ($script:T.EH_LogImgErr -f $camReport[$i].Name, $_) }
+                    }
+                }
+            }
+
+            $pkg.Save()
+            $pkg.Dispose()
             & $Log ($script:T.EH_LogSaved -f $xlsxPath)
             if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
             return
         }
 
+        & $Log $script:T.EH_LogNoExcelNoData
         if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
         return
     }
