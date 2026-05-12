@@ -141,7 +141,11 @@ $script:T = @{
     EH_ChkFpsLive    = 'FPS (Live)'
     EH_ChkFluxSupp   = 'Extra streams'
     EH_ChkRetention  = 'Available retention'
-    EH_ChkSnapshot   = 'Snapshot (slow - 1 image per camera)'
+    EH_ChkSnapshotJ7 = 'Snapshot J-7 (historical comparison)'
+    EH_ChkSnapshot   = 'Snapshot Live (latest image)'
+    EH_GrpMiseEnPage  = 'Sheet split'
+    EH_LblRowsPerPage = 'Cameras per sheet:'
+    EH_RppUnlimited   = 'Unlimited'
     EH_BtnCancel     = 'Cancel'
     EH_BtnExport     = 'Export'
     EH_NoColumn      = 'Please select at least one column.'
@@ -168,7 +172,8 @@ $script:T = @{
     XL_FpsLive      = 'FPS (Live)'
     XL_FluxSupp     = 'Extra streams'
     XL_Retention    = 'Available retention'
-    XL_Snapshot     = 'Snapshot'
+    XL_SnapshotJ7   = 'Snapshot J-7'
+    XL_Snapshot     = 'Snapshot Live'
     XL_Aucun        = 'None'
     XL_ExtraFlux    = '{0} extra streams'
 
@@ -183,9 +188,9 @@ $script:T = @{
     EH_LogPlaybackOk  = 'Dates retrieved for {0} cameras.'
     EH_LogPlaybackErr = 'WARNING: Cannot retrieve recording dates: {0}'
     EH_LogExcelFallback        = 'Excel is not installed. Falling back to ImportExcel.'
-    EH_LogSnapshotsUnsupported = 'Snapshots are not supported with ImportExcel. Exporting without images.'
     EH_LogNoExcelNoData        = 'No export possible without Excel or ImportExcel.'
-    EH_LogSnaps       = 'Retrieving snapshots in parallel...'
+    EH_LogSnaps       = 'Retrieving live snapshots...'
+    EH_LogSnapsJ7     = 'Retrieving J-7 snapshots ({0})...'
     EH_LogSnapOk      = '  [OK {0}/{1}] {2}'
     EH_LogSnapEmpty   = "  WARNING: Empty snapshot '{0}'"
     EH_LogSnapErr     = "  WARNING: '{0}' : {1}"
@@ -259,7 +264,7 @@ $script:T = @{
 
     # SNAPSHOT ALL
     SA_LogCams       = 'Retrieving camera list...'
-    SA_LogFound      = '{0} cameras found. Capturing in parallel...'
+    SA_LogFound      = '{0} cameras found. Capturing...'
     SA_LogHistorique = 'Historical mode: {0}'
     SA_LogCancelled  = 'WARNING: Operation cancelled before launch.'
     SA_LogOk         = '  [OK {0}/{1}] {2}'
@@ -267,7 +272,7 @@ $script:T = @{
     SA_LogError      = "  ERROR '{0}': {1}"
     SA_LogDone       = '{0} snapshots saved in: {1}'
     SA_LogDoneErr    = '{0} snapshots saved, {1} failed in: {2}'
-    SA_LogTimeout    = 'WARNING: Timeout - some snapshots did not respond (10 min exceeded).'
+
 
     # SNAPSHOT SELECTED
     SS_LogOpening    = 'Opening camera selector...'

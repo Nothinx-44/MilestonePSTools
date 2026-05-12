@@ -79,8 +79,104 @@ function Show-ExportColumnSelector {
             <StackPanel>
                 <TextBlock Text="$($script:T.EH_GrpOptions)"
                            Foreground="#CBA6F7" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
+                <CheckBox x:Name="ChkSnapshotJ7" Content="$($script:T.EH_ChkSnapshotJ7)" IsChecked="False"
+                          Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                 <CheckBox x:Name="ChkSnapshot" Content="$($script:T.EH_ChkSnapshot)" IsChecked="False"
                           Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+            </StackPanel>
+        </Border>
+
+        <Border Background="#181825" BorderBrush="#313244" BorderThickness="1" CornerRadius="6"
+                Padding="14,10" Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="$($script:T.EH_GrpMiseEnPage)"
+                           Foreground="#F38BA8" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="$($script:T.EH_LblRowsPerPage)"
+                               Foreground="#CDD6F4" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="CboRowsPerPage" Width="130" FontSize="12">
+                        <ComboBox.Template>
+                            <ControlTemplate TargetType="ComboBox">
+                                <Grid>
+                                    <!-- ToggleButton couvre TOUTE la largeur : clic partout possible -->
+                                    <ToggleButton Focusable="False" ClickMode="Press"
+                                        IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Style>
+                                            <Style TargetType="ToggleButton">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Border Background="#313244" BorderBrush="#45475A"
+                                                                    BorderThickness="1" CornerRadius="3">
+                                                                <ContentPresenter/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ToggleButton.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="22"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ContentPresenter Grid.Column="0"
+                                                Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                Margin="8,4,0,4" VerticalAlignment="Center"
+                                                TextBlock.Foreground="#CDD6F4" TextBlock.FontSize="12"/>
+                                            <Path Grid.Column="1" Data="M 0 0 L 6 6 L 12 0"
+                                                  Stroke="#CDD6F4" StrokeThickness="1.5"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </ToggleButton>
+                                    <Popup x:Name="PART_Popup" Placement="Bottom"
+                                           IsOpen="{TemplateBinding IsDropDownOpen}"
+                                           AllowsTransparency="True" Focusable="False">
+                                        <Border Background="#313244" BorderBrush="#45475A" BorderThickness="1">
+                                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                                <ItemsPresenter/>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
+                            </ControlTemplate>
+                        </ComboBox.Template>
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem">
+                                <Setter Property="Foreground" Value="#CDD6F4"/>
+                                <Setter Property="Background" Value="#313244"/>
+                                <Setter Property="FontSize"   Value="12"/>
+                                <Setter Property="Padding"    Value="8,5"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ComboBoxItem">
+                                            <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#45475A"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#585B70"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                        <ComboBoxItem Content="$($script:T.EH_RppUnlimited)" IsSelected="True"/>
+                        <ComboBoxItem Content="5"/>
+                        <ComboBoxItem Content="10"/>
+                        <ComboBoxItem Content="15"/>
+                        <ComboBoxItem Content="20"/>
+                        <ComboBoxItem Content="25"/>
+                        <ComboBoxItem Content="50"/>
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
         </Border>
 
@@ -118,6 +214,7 @@ function Show-ExportColumnSelector {
         'FPSLive'         = $window.FindName('ChkFPSLive')
         'FluxSupp'        = $window.FindName('ChkFluxSupp')
         'Retention'       = $window.FindName('ChkRetention')
+        'SnapshotJ7'      = $window.FindName('ChkSnapshotJ7')
         'Snapshot'        = $window.FindName('ChkSnapshot')
     }
 
@@ -142,11 +239,13 @@ function Show-ExportColumnSelector {
             ) | Out-Null
             return
         }
-        $window.Tag = [string[]]$sel
+        $rppRaw = $window.FindName('CboRowsPerPage').SelectedItem.Content
+        $rpp    = if ($rppRaw -eq $script:T.EH_RppUnlimited) { 0 } else { [int]$rppRaw }
+        $window.Tag = @{ Columns = [string[]]$sel; RowsPerPage = $rpp }
         $window.DialogResult = $true
     })
 
-    if ($window.ShowDialog() -eq $true) { return [string[]]$window.Tag }
+    if ($window.ShowDialog() -eq $true) { return $window.Tag }
     return $null
 }
 
@@ -166,14 +265,17 @@ function Export-HardwareReport {
         return 'N/A'
     }
 
-    $selectedColumns = Show-ExportColumnSelector
-    if ($null -eq $selectedColumns) {
+    $exportConfig = Show-ExportColumnSelector
+    if ($null -eq $exportConfig) {
         & $Log $script:T.EH_Cancelled
         return
     }
+    $selectedColumns = $exportConfig.Columns
+    $rowsPerPage     = [int]$exportConfig.RowsPerPage
 
-    $includePassword  = $selectedColumns -contains 'MotDePasse'
-    $includeSnapshots = $selectedColumns -contains 'Snapshot'
+    $includePassword    = $selectedColumns -contains 'MotDePasse'
+    $includeSnapshots   = $selectedColumns -contains 'Snapshot'
+    $includeSnapshotsJ7 = $selectedColumns -contains 'SnapshotJ7'
     $needStreams       = ($selectedColumns | Where-Object {
         $_ -in 'CodecEnreg','ResolutionEnreg','FPSEnreg','CodecLive','ResolutionLive','FPSLive','FluxSupp'
     }).Count -gt 0
@@ -197,15 +299,18 @@ function Export-HardwareReport {
         @{ Name = 'ResolutionLive';  Group = 'stream'; Header = $script:T.XL_ResLive }
         @{ Name = 'FPSLive';         Group = 'stream'; Header = $script:T.XL_FpsLive }
         @{ Name = 'FluxSupp';        Group = 'stream'; Header = $script:T.XL_FluxSupp }
-        @{ Name = 'Retention';       Group = 'ret';    Header = $script:T.XL_Retention }
-        @{ Name = 'Snapshot';        Group = 'snap';   Header = $script:T.XL_Snapshot }
+        @{ Name = 'Retention';    Group = 'ret';  Header = $script:T.XL_Retention }
+        @{ Name = 'SnapshotJ7';  Group = 'snap'; Header = $script:T.XL_SnapshotJ7 }
+        @{ Name = 'Snapshot';    Group = 'snap'; Header = $script:T.XL_Snapshot }
     )
 
     $activeColumns = @($allColumnDefs | Where-Object { $selectedColumns -contains $_.Name })
 
-    $snapColIndex = 0
+    $snapColIndex   = 0
+    $snapJ7ColIndex = 0
     for ($i = 0; $i -lt $activeColumns.Count; $i++) {
-        if ($activeColumns[$i].Name -eq 'Snapshot') { $snapColIndex = $i + 1; break }
+        if ($activeColumns[$i].Name -eq 'Snapshot')   { $snapColIndex   = $i + 1 }
+        if ($activeColumns[$i].Name -eq 'SnapshotJ7') { $snapJ7ColIndex = $i + 1 }
     }
 
     & $Log $script:T.EH_LogGenerating
@@ -265,86 +370,71 @@ function Export-HardwareReport {
         catch { & $Log ($script:T.EH_LogPlaybackErr -f $_) }
     }
 
-    $tempDir   = $null
-    $snapPaths = @{}
+    $tempDir    = $null
+    $tempDirJ7  = $null
+    $snapPaths  = @{}
+    $snapJ7Paths = @{}
 
     if ($includeSnapshots) {
         & $Log $script:T.EH_LogSnaps
-        $quality = $Config.snapshotQuality
-        $tempDir = Join-Path $env:TEMP "MilestoneHW_$(Get-Random)"
+        $quality  = $Config.snapshotQuality
+        $tempDir  = Join-Path $env:TEMP "MilestoneHW_$(Get-Random)"
         New-Item $tempDir -ItemType Directory -Force | Out-Null
 
-        $milestonePath = (Get-Module MilestonePSTools -ErrorAction SilentlyContinue).ModuleBase
+        $received = 0
+        $snapTotal = $camReport.Count
 
-        $snapScript = {
-            param($camera, $quality, $filePath, $milestonePath)
+        foreach ($cam in $camReport) {
+            $vmsCamera = $vmsCamByName[$cam.Name]
+            if (-not $vmsCamera) { continue }
+
+            $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
+            $filePath = Join-Path $tempDir "$safeName.jpg"
+
             try {
-                if ($milestonePath) { Import-Module $milestonePath -Force -ErrorAction Stop }
-                $snap = $camera | Get-Snapshot -Behavior GetEnd -Quality $quality -ErrorAction Stop
+                $snap = $vmsCamera | Get-Snapshot -Behavior GetEnd -Quality $quality -ErrorAction Stop
                 if ($snap -and $snap.Bytes -and $snap.Bytes.Length -gt 0) {
                     [System.IO.File]::WriteAllBytes($filePath, $snap.Bytes)
-                    return $filePath
+                    $snapPaths[$cam.Name] = $filePath
+                    $received++
+                    & $Log ($script:T.EH_LogSnapOk -f $received, $snapTotal, $cam.Name)
+                } else {
+                    & $Log ($script:T.EH_LogSnapEmpty -f $cam.Name)
                 }
-            } catch { }
-            return $null
-        }
-
-        $maxThreads = [Math]::Min($total, 12)
-        $pool = [RunspaceFactory]::CreateRunspacePool(1, $maxThreads)
-        $pool.ApartmentState = 'MTA'
-        $pool.Open()
-
-        try {
-            $jobs = [System.Collections.Generic.List[hashtable]]::new()
-            foreach ($cam in $camReport) {
-                $vmsCamera = $vmsCamByName[$cam.Name]
-                if (-not $vmsCamera) { continue }
-                $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
-                $filePath = Join-Path $tempDir "$safeName.jpg"
-                $ps = [PowerShell]::Create()
-                $ps.RunspacePool = $pool
-                [void]$ps.AddScript($snapScript).AddArgument($vmsCamera).AddArgument($quality).AddArgument($filePath).AddArgument($milestonePath)
-                $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
+            } catch {
+                & $Log ($script:T.EH_LogSnapErr -f $cam.Name, $_)
             }
 
-            $pending  = [System.Collections.Generic.List[hashtable]]::new($jobs)
-            $received = 0
-            $timeout  = [datetime]::UtcNow.AddMinutes(10)
+            & $ReportProgress $received $snapTotal
+        }
 
-            while ($pending.Count -gt 0) {
-                if ([datetime]::UtcNow -gt $timeout) {
-                    foreach ($job in @($pending)) {
-                        try { $job.PS.Stop() } catch {}
-                        $job.PS.Dispose()
-                    }
-                    $pending.Clear()
-                    & $Log $script:T.EH_LogSnapTimeout
-                    break
-                }
-                $completed = @($pending | Where-Object { $_.Handle.IsCompleted })
-                foreach ($job in $completed) {
-                    [void]$pending.Remove($job)
-                    try {
-                        $result = [string]($job.PS.EndInvoke($job.Handle) | Select-Object -First 1)
-                        if ($result) {
-                            $snapPaths[$job.Name] = $result
-                            $received++
-                            & $Log ($script:T.EH_LogSnapOk -f $received, $jobs.Count, $job.Name)
-                        }
-                        else { & $Log ($script:T.EH_LogSnapEmpty -f $job.Name) }
-                    }
-                    catch { & $Log ($script:T.EH_LogSnapErr -f $job.Name, $_) }
-                    finally { $job.PS.Dispose() }
-                    & $ReportProgress ($jobs.Count - $pending.Count) $jobs.Count
-                }
-                if ($pending.Count -gt 0) { Start-Sleep -Milliseconds 150 }
-            }
+        & $Log ($script:T.EH_LogSnapsDone -f $snapPaths.Count, $snapTotal)
+    }
+
+    if ($includeSnapshotsJ7) {
+        $j7Time   = [datetime]::Now.AddDays(-7)
+        $quality  = $Config.snapshotQuality
+        & $Log ($script:T.EH_LogSnapsJ7 -f $j7Time.ToString('dd/MM/yyyy HH:mm'))
+        $tempDirJ7 = Join-Path $env:TEMP "MilestoneHW_J7_$(Get-Random)"
+        New-Item $tempDirJ7 -ItemType Directory -Force | Out-Null
+
+        $j7Total = $camReport.Count ; $j7Recv = 0
+        foreach ($cam in $camReport) {
+            $vmsCamera = $vmsCamByName[$cam.Name]
+            if (-not $vmsCamera) { continue }
+            $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
+            $filePath = Join-Path $tempDirJ7 "$safeName.jpg"
+            try {
+                $snap = $vmsCamera | Get-Snapshot -Behavior GetNearest -Time $j7Time -Quality $quality -ErrorAction Stop
+                if ($snap -and $snap.Bytes -and $snap.Bytes.Length -gt 0) {
+                    [System.IO.File]::WriteAllBytes($filePath, $snap.Bytes)
+                    $snapJ7Paths[$cam.Name] = $filePath
+                    $j7Recv++
+                    & $Log ($script:T.EH_LogSnapOk -f $j7Recv, $j7Total, $cam.Name)
+                } else { & $Log ($script:T.EH_LogSnapEmpty -f $cam.Name) }
+            } catch { & $Log ($script:T.EH_LogSnapErr -f $cam.Name, $_) }
         }
-        finally {
-            $pool.Close()
-            $pool.Dispose()
-        }
-        & $Log ($script:T.EH_LogSnapsDone -f $snapPaths.Count, $jobs.Count)
+        & $Log ($script:T.EH_LogSnapsDone -f $snapJ7Paths.Count, $j7Total)
     }
 
     if (-not (Test-Path $Config.outputDirectory)) {
@@ -352,7 +442,16 @@ function Export-HardwareReport {
     }
     $xlsxPath = Join-Path $Config.outputDirectory $script:T.XL_FileName
 
-    function Try-LoadImportExcel {
+    # Couleurs des groupes de colonnes — partagees entre le chemin COM et ImportExcel
+    # Format COM : BGR (0xBBGGRR) — extrait en RGB pour System.Drawing / EPPlus
+    $groupColors = @{
+        'base'   = @{ Bg = 0x44413D; Fg = 0xF4D6CD }
+        'stream' = @{ Bg = 0x1D3557; Fg = 0xA8DADC }
+        'ret'    = @{ Bg = 0x1B4332; Fg = 0xA6E3A1 }
+        'snap'   = @{ Bg = 0x2D2B55; Fg = 0xCBA6F7 }
+    }
+
+    function Get-ImportExcelModule {
         # Module already imported in this session (e.g. loaded from Dependencies/ at startup)
         if (Get-Module -Name ImportExcel) {
             return $true
@@ -376,120 +475,228 @@ function Export-HardwareReport {
         }
     }
 
+    # Tenter Excel COM — echec silencieux, on bascule sur ImportExcel si absent
     $excel = $null
-    $useImportExcel = $false
-    try {
-        $excel = New-Object -ComObject Excel.Application -ErrorAction Stop
-    }
-    catch {
-        & $Log $script:T.EH_LogNoExcel
-        if (Try-LoadImportExcel) {
-            & $Log $script:T.EH_LogExcelFallback
+    try { $excel = New-Object -ComObject Excel.Application -ErrorAction Stop }
+    catch { & $Log $script:T.EH_LogNoExcel }
 
-            if ($activeColumns.Count -eq 0) {
-                & $Log $script:T.EH_LogNoExcelNoData
-                if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
-                return
-            }
+    # ---------------------------------------------------------------
+    # CHEMIN IMPORTEXCEL — hors du catch pour eviter les anomalies de
+    # propagation d'erreur de PowerShell 5.1 dans un bloc catch WPF.
+    # ---------------------------------------------------------------
+    if (-not $excel) {
+        if (-not (Get-ImportExcelModule)) {
+            & $Log $script:T.EH_LogNoExcelNoData
+            if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
+            return
+        }
+        & $Log $script:T.EH_LogExcelFallback
 
-            $rows = @()
-            foreach ($cam in $camReport) {
-                $row = [ordered]@{}
-                $ip = if ($cam.Address -match '([0-9]{1,3}(?:\.[0-9]{1,3}){3})') { $Matches[1] } else { $cam.Address }
-                $si         = $streamLookup[$cam.Name]
-                $recStream  = if ($si) { $si.Rec  } else { $null }
-                $liveStream = if ($si) { $si.Live } else { $null }
-                $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
-                $ret        = if ($retentionLookup.ContainsKey($cam.Name)) { $retentionLookup[$cam.Name] } else { 'N/A' }
-
-                foreach ($col in $activeColumns) {
-                    $value = switch ($col.Name) {
-                        'Nom'             { $cam.Name }
-                        'Fabricant'       { $cam.DriverFamily }
-                        'Modele'          { $cam.Model }
-                        'IP'              { $ip }
-                        'MAC'             { $cam.MAC }
-                        'Firmware'        { $cam.Firmware }
-                        'ServeurRec'      { $cam.RecorderName }
-                        'Utilisateur'     { $cam.Username }
-                        'MotDePasse'      { if ($includePassword) { $cam.Password } else { '' } }
-                        'CodecEnreg'      { Get-StreamSetting $recStream 'Codec' }
-                        'ResolutionEnreg' { Get-StreamSetting $recStream 'Resolution' }
-                        'FPSEnreg'        { Get-StreamSetting $recStream 'FPS' }
-                        'CodecLive'       { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' } }
-                        'ResolutionLive'  { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' } }
-                        'FPSLive'         { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' } }
-                        'FluxSupp'        { if ($si -and $si.Extra -gt 0) { $script:T.XL_ExtraFlux -f $si.Extra } else { '' } }
-                        'Retention'       { $ret }
-                        default           { '' }
-                    }
-                    $row[$col.Header] = $value
-                }
-                $rows += [pscustomobject]$row
-            }
-
-            $pkg = $rows | Export-Excel -Path $xlsxPath -WorksheetName $script:T.XL_SheetName -AutoSize -BoldTopRow -TableName 'Cameras' -ClearSheet -PassThru
-
-            if ($snapColIndex -gt 0) {
-                Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue
-                $ws = $pkg.Workbook.Worksheets[$script:T.XL_SheetName]
-                $ws.Column($snapColIndex).Width = 28
-                $epSnapCol = $snapColIndex - 1  # SetPosition : colonne 0-basee
-
-                # 28 chars * 7 px/char = 196 px  |  90 pts * 4/3 = 120 px
-                $cellW = 194
-                $cellH = 118
-
-                for ($i = 0; $i -lt $camReport.Count; $i++) {
-                    $wsRow = $i + 2  # row 1 = entete, row 2 = premiere camera
-                    $ws.Row($wsRow).Height = 90
-
-                    $snapFile = $snapPaths[$camReport[$i].Name]
-                    if ($snapFile -and (Test-Path $snapFile)) {
-                        try {
-                            $img = [System.Drawing.Image]::FromFile($snapFile)
-                            try {
-                                $pic = $ws.Drawings.AddPicture(([guid]::NewGuid().ToString()), $img)
-                                $pic.SetPosition($wsRow - 1, 1, $epSnapCol, 1)
-                                $pic.SetSize($cellW, $cellH)
-                            }
-                            finally { $img.Dispose() }
-                        }
-                        catch { & $Log ($script:T.EH_LogImgErr -f $camReport[$i].Name, $_) }
-                    }
-                }
-            }
-
-            $pkg.Save()
-            $pkg.Dispose()
-            & $Log ($script:T.EH_LogSaved -f $xlsxPath)
+        if ($activeColumns.Count -eq 0) {
+            & $Log $script:T.EH_LogNoExcelNoData
             if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
             return
         }
 
-        & $Log $script:T.EH_LogNoExcelNoData
-        if ($tempDir -and (Test-Path $tempDir)) { Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue }
+        # ---------------------------------------------------------------
+        # CHEMIN IMPORTEXCEL : tout est delegue au subprocess (EPPlus propre).
+        # Export-Excel depuis le contexte WPF+MilestonePSTools provoque des
+        # erreurs EPPlus internes. Le subprocess cree le xlsx de zero.
+        # ---------------------------------------------------------------
+        & $Log 'Creation du fichier Excel via sous-processus...'
+
+        # Calculer les valeurs de chaque camera (stream/retention deja en memoire)
+        $camValues = @()
+        foreach ($cam in $camReport) {
+            $epRow = [ordered]@{}
+            $ip = if ($cam.Address -match '([0-9]{1,3}(?:\.[0-9]{1,3}){3})') { $Matches[1] } else { $cam.Address }
+            $si         = $streamLookup[$cam.Name]
+            $recStream  = if ($si) { $si.Rec  } else { $null }
+            $liveStream = if ($si) { $si.Live } else { $null }
+            $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
+            $ret        = if ($retentionLookup.ContainsKey($cam.Name)) { $retentionLookup[$cam.Name] } else { 'N/A' }
+            foreach ($col in $activeColumns) {
+                $epRow[$col.Name] = switch ($col.Name) {
+                    'Nom'             { $cam.Name }
+                    'Fabricant'       { $cam.DriverFamily }
+                    'Modele'          { $cam.Model }
+                    'IP'              { $ip }
+                    'MAC'             { $cam.MAC }
+                    'Firmware'        { $cam.Firmware }
+                    'ServeurRec'      { $cam.RecorderName }
+                    'Utilisateur'     { $cam.Username }
+                    'MotDePasse'      { if ($includePassword) { $cam.Password } else { '' } }
+                    'CodecEnreg'      { Get-StreamSetting $recStream 'Codec' }
+                    'ResolutionEnreg' { Get-StreamSetting $recStream 'Resolution' }
+                    'FPSEnreg'        { Get-StreamSetting $recStream 'FPS' }
+                    'CodecLive'       { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' } }
+                    'ResolutionLive'  { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' } }
+                    'FPSLive'         { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' } }
+                    'FluxSupp'        { if ($si -and $si.Extra -gt 0) { $script:T.XL_ExtraFlux -f $si.Extra } else { '' } }
+                    'Retention'       { $ret }
+                    default           { '' }
+                }
+            }
+            $epRow['__Snap']   = if ($snapColIndex   -gt 0 -and $snapPaths.ContainsKey($cam.Name))   { $snapPaths[$cam.Name]   } else { '' }
+            $epRow['__SnapJ7'] = if ($snapJ7ColIndex -gt 0 -and $snapJ7Paths.ContainsKey($cam.Name)) { $snapJ7Paths[$cam.Name] } else { '' }
+            $camValues += [pscustomobject]$epRow
+        }
+
+        # Tout le reste (creation xlsx, couleurs, bordures, snapshots) est fait
+        # dans un subprocess PowerShell propre — aucun appel EPPlus dans ce process.
+        $spPayload = [ordered]@{
+            XlsxPath    = $xlsxPath
+            ImExPath    = (Get-Module ImportExcel).ModuleBase
+            SheetBase   = $script:T.XL_SheetName
+            RowsPerPage = $rowsPerPage
+            SnapCol     = $snapColIndex
+            SnapJ7Col   = $snapJ7ColIndex
+            GroupColors = @{
+                base   = @{ Bg = $groupColors.base.Bg;   Fg = $groupColors.base.Fg }
+                stream = @{ Bg = $groupColors.stream.Bg; Fg = $groupColors.stream.Fg }
+                ret    = @{ Bg = $groupColors.ret.Bg;    Fg = $groupColors.ret.Fg }
+                snap   = @{ Bg = $groupColors.snap.Bg;   Fg = $groupColors.snap.Fg }
+            }
+            Columns     = @($activeColumns | ForEach-Object { [ordered]@{ Name=$_.Name; Group=$_.Group; Header=$_.Header } })
+            Cameras     = $camValues
+        } | ConvertTo-Json -Depth 5
+
+        $spJson = Join-Path $env:TEMP "MHW_$(Get-Random).json"
+        $spPs1  = Join-Path $env:TEMP "MHW_$(Get-Random).ps1"
+        Set-Content -Path $spJson -Value $spPayload -Encoding UTF8
+
+        $spScript = @'
+param([string]$J)
+try {
+    $d = Get-Content $J -Raw | ConvertFrom-Json
+    Import-Module $d.ImExPath -Force
+    Add-Type -AssemblyName System.Drawing
+    function cc([int]$n){ $s='';$t=$n;while($t-gt 0){$t--;$s=[char]([byte][char]'A'+($t%26))+$s;$t=[Math]::Floor($t/26)};$s }
+    $light  = [System.Drawing.Color]::FromArgb(221,235,247)
+    $dark   = [System.Drawing.Color]::FromArgb(189,215,238)
+    $bs     = [OfficeOpenXml.Style.ExcelBorderStyle]::Thin
+    $nbCols = $d.Columns.Count
+    $lastCol = cc $nbCols
+    $total  = $d.Cameras.Count
+    $rpp    = [int]$d.RowsPerPage
+    $chunk  = if ($rpp -gt 0) { $rpp } else { [Math]::Max(1,$total) }
+    $pkg    = $null
+    $start  = 0
+    $sidx   = 0
+
+    while ($start -lt $total) {
+        $end   = [Math]::Min($start + $chunk, $total)
+        $cams  = @($d.Cameras[$start..($end-1)])
+        $sname = if ($rpp -gt 0) { "$($d.SheetBase) $($start+1)-$end" } else { $d.SheetBase }
+
+        $rows = @()
+        foreach ($cam in $cams) {
+            $row = [ordered]@{}
+            foreach ($col in $d.Columns) {
+                $row[$col.Header] = if ($col.Name -notin @('Snapshot','SnapshotJ7')) { [string]$cam.($col.Name) } else { '' }
+            }
+            $rows += [pscustomobject]$row
+        }
+
+        # -PassThru obligatoire sur tous les appels : sans lui, Export-Excel appelle
+        # Close-ExcelPackage qui sauvegarde ET dispose le package, rendant $pkg inutilisable.
+        if ($null -eq $pkg) {
+            $pkg = $rows | Export-Excel -Path $d.XlsxPath -WorksheetName $sname -AutoSize -AutoFilter -BoldTopRow -ClearSheet -PassThru
+        } else {
+            $pkg = $rows | Export-Excel -ExcelPackage $pkg -WorksheetName $sname -AutoSize -AutoFilter -BoldTopRow -PassThru
+        }
+        $sidx++
+        $ws = $pkg.Workbook.Worksheets[$sidx]
+        if (-not $ws) { $start += $chunk; continue }
+
+        $nbR = $end - $start
+        $lrow = $nbR + 1
+
+        # Couleurs en-tetes
+        for ($ci = 0; $ci -lt $d.Columns.Count; $ci++) {
+            $grp = $d.GroupColors.($d.Columns[$ci].Group)
+            $bgH=[int]$grp.Bg; $fgH=[int]$grp.Fg
+            $bgC=[System.Drawing.Color]::FromArgb($bgH -band 0xFF,($bgH -shr 8) -band 0xFF,($bgH -shr 16) -band 0xFF)
+            $fgC=[System.Drawing.Color]::FromArgb($fgH -band 0xFF,($fgH -shr 8) -band 0xFF,($fgH -shr 16) -band 0xFF)
+            $a = "$(cc ($ci+1))1"
+            try { Set-ExcelRange -Worksheet $ws -Range $ws.Cells[$a] -BackgroundColor $bgC -FontColor $fgC } catch {}
+        }
+
+        # Lignes alternees
+        for ($r = 2; $r -le $lrow; $r++) {
+            $bg = if ($r % 2 -eq 0) { $light } else { $dark }
+            $ws.Cells["A${r}:${lastCol}${r}"].Style.Fill.PatternType = [OfficeOpenXml.Style.ExcelFillStyle]::Solid
+            $ws.Cells["A${r}:${lastCol}${r}"].Style.Fill.BackgroundColor.SetColor($bg)
+        }
+
+        # Bordures
+        $ws.Cells["A1:${lastCol}${lrow}"].Style.Border.Top.Style    = $bs
+        $ws.Cells["A1:${lastCol}${lrow}"].Style.Border.Bottom.Style = $bs
+        $ws.Cells["A1:${lastCol}${lrow}"].Style.Border.Left.Style   = $bs
+        $ws.Cells["A1:${lastCol}${lrow}"].Style.Border.Right.Style  = $bs
+
+        # Snapshots — largeur colonne en characterWidth EPPlus (≈ 7px/char a 96dpi)
+        # 194px / 7 ≈ 27.7 → 28. Hauteur en points : 90pt * 1.333 ≈ 120px > 118px image.
+        foreach ($sd in @(
+            @{ Col=[int]$d.SnapJ7Col; Key='__SnapJ7' }
+            @{ Col=[int]$d.SnapCol;   Key='__Snap'   }
+        )) {
+            if ($sd.Col -gt 0) {
+                $ws.Column($sd.Col).Width = 28
+                $ec = $sd.Col - 1
+                for ($i = 0; $i -lt $cams.Count; $i++) {
+                    $wsRow = $i + 2
+                    if ($ws.Row($wsRow).Height -lt 90) { $ws.Row($wsRow).Height = 90 }
+                    $sf = [string]($cams[$i].($sd.Key))
+                    if ($sf -and (Test-Path $sf)) {
+                        try {
+                            $img = [System.Drawing.Image]::FromFile($sf)
+                            $pic = $ws.Drawings.AddPicture([guid]::NewGuid().ToString(),$img)
+                            $pic.SetPosition($wsRow-1, 2, $ec, 2)
+                            $pic.SetSize(190, 114)
+                            $img.Dispose()
+                        } catch {}
+                    }
+                }
+            }
+        }
+        $start += $chunk
+    }
+    if ($null -ne $pkg) { $pkg.Save(); $pkg.Dispose() }
+} finally { Remove-Item $J -Force -ErrorAction SilentlyContinue }
+'@
+        Set-Content -Path $spPs1 -Value $spScript -Encoding UTF8
+
+        try {
+            $proc = Start-Process -FilePath 'powershell.exe' `
+                -ArgumentList '-ExecutionPolicy','Bypass','-NonInteractive','-File',$spPs1,$spJson `
+                -Wait -PassThru -WindowStyle Hidden
+            if ($proc.ExitCode -eq 0) { & $Log ($script:T.EH_LogSaved -f $xlsxPath) }
+            else { & $Log ("AVERTISSEMENT: Sous-processus Excel code $($proc.ExitCode).") }
+        } catch {
+            & $Log ("AVERTISSEMENT: Sous-processus Excel : $_")
+        } finally {
+            Remove-Item $spPs1 -Force -ErrorAction SilentlyContinue
+        }
+
+
+        if ($tempDir   -and (Test-Path $tempDir))   { Remove-Item $tempDir   -Recurse -Force -ErrorAction SilentlyContinue }
+        if ($tempDirJ7 -and (Test-Path $tempDirJ7)) { Remove-Item $tempDirJ7 -Recurse -Force -ErrorAction SilentlyContinue }
         return
     }
 
+    # ---------------------------------------------------------------
+    # CHEMIN COM EXCEL
+    # ---------------------------------------------------------------
     $excel.Visible       = $false
     $excel.DisplayAlerts = $false
 
-    $groupColors = @{
-        'base'   = @{ Bg = 0x44413D; Fg = 0xF4D6CD }
-        'stream' = @{ Bg = 0x1D3557; Fg = 0xA8DADC }
-        'ret'    = @{ Bg = 0x1B4332; Fg = 0xA6E3A1 }
-        'snap'   = @{ Bg = 0x2D2B55; Fg = 0xCBA6F7 }
-    }
-
-    try {
-        $workbook = $excel.Workbooks.Add()
-        $sheet    = $workbook.Sheets.Item(1)
-        $sheet.Name = $script:T.XL_SheetName
-
+    # Scriptblock : applique les en-tetes colores sur une feuille COM
+    $addComHeaders = {
+        param([object]$sh)
         for ($c = 0; $c -lt $activeColumns.Count; $c++) {
             $col  = $activeColumns[$c]
-            $cell = $sheet.Cells.Item(1, $c + 1)
+            $cell = $sh.Cells.Item(1, $c + 1)
             $cell.Value2              = $col.Header
             $cell.Font.Bold           = $true
             $cell.Font.Size           = 11
@@ -497,13 +704,44 @@ function Export-HardwareReport {
             $cell.Interior.Color      = $groupColors[$col.Group].Bg
             $cell.Font.Color          = $groupColors[$col.Group].Fg
         }
+        $sh.Rows.Item(2).Select() | Out-Null
+        $sh.Application.ActiveWindow.FreezePanes = $true
+    }
 
-        $sheet.Rows.Item(2).Select() | Out-Null
-        $sheet.Application.ActiveWindow.FreezePanes = $true
+    # Scriptblock : finalise une feuille COM (largeurs, bordures)
+    $finishComSheet = {
+        param([object]$sh, [int]$lastRow)
+        if ($snapColIndex   -gt 0) { $sh.Columns.Item($snapColIndex).ColumnWidth   = 28 }
+        if ($snapJ7ColIndex -gt 0) { $sh.Columns.Item($snapJ7ColIndex).ColumnWidth = 28 }
+        for ($c = 1; $c -le $activeColumns.Count; $c++) {
+            if ($c -ne $snapColIndex -and $c -ne $snapJ7ColIndex) { $sh.Columns.Item($c).AutoFit() | Out-Null }
+        }
+        if ($lastRow -ge 2) {
+            $rng = $sh.Range($sh.Cells.Item(1, 1), $sh.Cells.Item($lastRow, $activeColumns.Count))
+            $rng.Borders.LineStyle = 1
+            $rng.Borders.Weight    = 2
+        }
+    }
+
+    # Calcule le nom de feuille avec la plage de cameras : "Cameras 1-5"
+    $getSheetName = {
+        param([int]$from, [int]$rpp, [int]$totalCams)
+        if ($rpp -le 0) { return $script:T.XL_SheetName }
+        $camFrom = ($from - 1) * $rpp + 1
+        $camTo   = [Math]::Min($from * $rpp, $totalCams)
+        return "$($script:T.XL_SheetName) $camFrom-$camTo"
+    }
+
+    try {
+        $workbook   = $excel.Workbooks.Add()
+        $sheetNum   = 1
+        $camOnSheet = 0
+        $sheet      = $workbook.Sheets.Item(1)
+        $sheet.Name = & $getSheetName 1 $rowsPerPage $total
+        & $addComHeaders $sheet
 
         $row   = 2
         $count = 0
-
         & $Log $script:T.EH_LogBuilding
 
         foreach ($cam in $camReport) {
@@ -512,7 +750,20 @@ function Export-HardwareReport {
                 break
             }
 
+            # Nouvelle feuille si le quota de cameras est atteint
+            if ($rowsPerPage -gt 0 -and $camOnSheet -ge $rowsPerPage) {
+                & $finishComSheet $sheet ($row - 1)
+                $sheetNum++
+                $newSheet = $workbook.Sheets.Add([Type]::Missing, $workbook.Sheets.Item($workbook.Sheets.Count))
+                $newSheet.Name = & $getSheetName $sheetNum $rowsPerPage $total
+                $sheet = $newSheet
+                & $addComHeaders $sheet
+                $row        = 2
+                $camOnSheet = 0
+            }
+
             $count++
+            $camOnSheet++
             & $ReportProgress $count $total
             & $Log ($script:T.EH_LogCamRow -f $count, $total, $cam.Name)
 
@@ -548,41 +799,46 @@ function Export-HardwareReport {
 
             for ($c = 0; $c -lt $activeColumns.Count; $c++) {
                 $colName = $activeColumns[$c].Name
-                if ($colName -eq 'Snapshot') { continue }
+                if ($colName -in 'Snapshot','SnapshotJ7') { continue }
                 $sheet.Cells.Item($row, $c + 1) = $values[$colName]
             }
 
-            if ($snapColIndex -gt 0) {
+            # Lignes alternees (couleurs resetees a chaque feuille car $row repart de 2)
+            $rowBg = if ($row % 2 -eq 0) { 0xF7EBDD } else { 0xEED7BD }
+            $sheet.Range(
+                $sheet.Cells.Item($row, 1),
+                $sheet.Cells.Item($row, $activeColumns.Count)
+            ).Interior.Color = $rowBg
+
+            # Snapshots : J-7 puis Live
+            if ($snapColIndex -gt 0 -or $snapJ7ColIndex -gt 0) {
                 $sheet.Rows.Item($row).RowHeight = 90
-                $snapFile = $snapPaths[$cam.Name]
-                if ($snapFile -and (Test-Path $snapFile)) {
-                    try {
-                        $cell  = $sheet.Cells.Item($row, $snapColIndex)
-                        $shape = $sheet.Shapes.AddPicture(
-                            $snapFile,
-                            [Microsoft.Office.Core.MsoTriState]::msoFalse,
-                            [Microsoft.Office.Core.MsoTriState]::msoCTrue,
-                            [double]$cell.Left, [double]$cell.Top,
-                            [double]$cell.Width, [double]$cell.Height
-                        )
-                        $shape.Placement = 1
+            }
+            foreach ($snapDef in @(
+                @{ Idx = $snapJ7ColIndex; Paths = $snapJ7Paths }
+                @{ Idx = $snapColIndex;   Paths = $snapPaths   }
+            )) {
+                if ($snapDef.Idx -gt 0) {
+                    $sf = $snapDef.Paths[$cam.Name]
+                    if ($sf -and (Test-Path $sf)) {
+                        try {
+                            $cell  = $sheet.Cells.Item($row, $snapDef.Idx)
+                            $shape = $sheet.Shapes.AddPicture(
+                                $sf, 0, -1,
+                                [double]$cell.Left, [double]$cell.Top,
+                                [double]$cell.Width, [double]$cell.Height
+                            )
+                            $shape.Placement = 1
+                        } catch { & $Log ($script:T.EH_LogImgErr -f $cam.Name, $_) }
                     }
-                    catch { & $Log ($script:T.EH_LogImgErr -f $cam.Name, $_) }
                 }
             }
 
             $row++
         }
 
-        if ($snapColIndex -gt 0) { $sheet.Columns.Item($snapColIndex).ColumnWidth = 28 }
-        for ($c = 1; $c -le $activeColumns.Count; $c++) {
-            if ($c -ne $snapColIndex) { $sheet.Columns.Item($c).AutoFit() | Out-Null }
-        }
-
-        $lastCol = $activeColumns.Count
-        $range   = $sheet.Range($sheet.Cells.Item(1, 1), $sheet.Cells.Item($row - 1, $lastCol))
-        $range.Borders.LineStyle = 1
-        $range.Borders.Weight    = 2
+        # Finaliser la derniere feuille
+        & $finishComSheet $sheet ($row - 1)
 
         $workbook.SaveAs($xlsxPath, 51)
         & $Log ($script:T.EH_LogSaved -f $xlsxPath)
@@ -591,6 +847,9 @@ function Export-HardwareReport {
         try { $workbook.Close($false) } catch {}
         try { $excel.Quit() }           catch {}
         try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null } catch {}
+        if ($tempDirJ7 -and (Test-Path $tempDirJ7)) {
+            Remove-Item $tempDirJ7 -Recurse -Force -ErrorAction SilentlyContinue
+        }
         if ($tempDir -and (Test-Path $tempDir)) {
             Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
         }

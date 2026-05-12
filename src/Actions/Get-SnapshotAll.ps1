@@ -22,84 +22,31 @@ function Get-SnapshotAll {
 
     $behavior = if ($SnapshotTime) { 'GetNearest' } else { 'GetEnd' }
     $quality  = $Config.snapshotQuality
-    $useTime  = [bool]$SnapshotTime
-    $snapTime = $SnapshotTime
 
-    $milestonePath = (Get-Module MilestonePSTools -ErrorAction SilentlyContinue).ModuleBase
+    $received = 0
+    $errors   = 0
 
-    $snapScript = {
-        param($camera, $behavior, $useTime, $snapTime, $quality, $dir, $milestonePath)
+    for ($i = 0; $i -lt $cameras.Count; $i++) {
+        $cam = $cameras[$i]
+
+        if (& $Cancel) { & $Log $script:T.SA_LogCancelled ; break }
+
         try {
-            if ($milestonePath) { Import-Module $milestonePath -Force -ErrorAction Stop }
-            if ($useTime) {
-                $camera | Get-Snapshot -UseFriendlyName -Behavior $behavior `
-                    -Time $snapTime -Quality $quality -Save -Path $dir
+            if ($SnapshotTime) {
+                $cam | Get-Snapshot -UseFriendlyName -Behavior $behavior `
+                    -Time $SnapshotTime -Quality $quality -Save -Path $snapshotDir
             } else {
-                $camera | Get-Snapshot -UseFriendlyName -Behavior $behavior `
-                    -Quality $quality -Save -Path $dir
+                $cam | Get-Snapshot -UseFriendlyName -Behavior $behavior `
+                    -Quality $quality -Save -Path $snapshotDir
             }
-            return $camera.Name
-        } catch { return $null }
-    }
-
-    $maxThreads = [Math]::Min($total, 12)
-    $pool = [RunspaceFactory]::CreateRunspacePool(1, $maxThreads)
-    $pool.ApartmentState = 'MTA'
-    $pool.Open()
-
-    try {
-        $jobs = [System.Collections.Generic.List[hashtable]]::new()
-
-        foreach ($cam in $cameras) {
-            if (& $Cancel) { & $Log $script:T.SA_LogCancelled ; break }
-            $ps = [PowerShell]::Create()
-            $ps.RunspacePool = $pool
-            [void]$ps.AddScript($snapScript).AddArgument($cam).AddArgument($behavior).AddArgument($useTime).AddArgument($snapTime).AddArgument($quality).AddArgument($snapshotDir).AddArgument($milestonePath)
-            $jobs.Add(@{ PS = $ps; Handle = $ps.BeginInvoke(); Name = $cam.Name })
+            $received++
+            & $Log ($script:T.SA_LogOk -f $received, $total, $cam.Name)
+        } catch {
+            $errors++
+            & $Log ($script:T.SA_LogFailed -f $cam.Name)
         }
 
-        $pending  = [System.Collections.Generic.List[hashtable]]::new($jobs)
-        $received = 0
-        $errors   = 0
-        $timeout  = [datetime]::UtcNow.AddMinutes(10)
-
-        while ($pending.Count -gt 0) {
-            # Timeout de securite : evite un blocage infini si une camera ne repond jamais
-            if ([datetime]::UtcNow -gt $timeout) {
-                foreach ($job in @($pending)) {
-                    try { $job.PS.Stop() } catch {}
-                    $job.PS.Dispose()
-                    $errors++
-                }
-                $pending.Clear()
-                & $Log $script:T.SA_LogTimeout
-                break
-            }
-
-            $completed = @($pending | Where-Object { $_.Handle.IsCompleted })
-            foreach ($job in $completed) {
-                [void]$pending.Remove($job)
-                try {
-                    $result = $job.PS.EndInvoke($job.Handle)
-                    if ($result) {
-                        $received++
-                        & $Log ($script:T.SA_LogOk -f $received, $total, $job.Name)
-                    } else {
-                        $errors++
-                        & $Log ($script:T.SA_LogFailed -f $job.Name)
-                    }
-                } catch {
-                    $errors++
-                    & $Log ($script:T.SA_LogError -f $job.Name, $_)
-                } finally { $job.PS.Dispose() }
-                & $ReportProgress ($total - $pending.Count) $total
-            }
-            if ($pending.Count -gt 0) { Start-Sleep -Milliseconds 150 }
-        }
-    }
-    finally {
-        $pool.Close()
-        $pool.Dispose()
+        & $ReportProgress ($i + 1) $total
     }
 
     $msg = if ($errors -gt 0) { $script:T.SA_LogDoneErr -f $received, $errors, $snapshotDir }
