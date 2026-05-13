@@ -38,10 +38,10 @@ function Show-ExportColumnSelector {
                     <CheckBox x:Name="ChkFabricant"   Content="$($script:T.EH_ChkFabricant)"  IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                     <CheckBox x:Name="ChkModele"      Content="$($script:T.EH_ChkModele)"     IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                     <CheckBox x:Name="ChkIP"          Content="$($script:T.EH_ChkIP)"         IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkMAC"         Content="$($script:T.EH_ChkMAC)"        IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFirmware"    Content="$($script:T.EH_ChkFirmware)"   IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkServeurRec"  Content="$($script:T.EH_ChkServeurRec)" IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkUtilisateur" Content="$($script:T.EH_ChkUser)"       IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkMAC"         Content="$($script:T.EH_ChkMAC)"        IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFirmware"    Content="$($script:T.EH_ChkFirmware)"   IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkServeurRec"  Content="$($script:T.EH_ChkServeurRec)" IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkUtilisateur" Content="$($script:T.EH_ChkUser)"       IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                     <CheckBox x:Name="ChkMotDePasse"  Content="$($script:T.EH_ChkPassword)"   IsChecked="False" Foreground="#FAB387" FontSize="12" Margin="4,5,4,5"/>
                 </UniformGrid>
             </StackPanel>
@@ -53,13 +53,13 @@ function Show-ExportColumnSelector {
                 <TextBlock Text="$($script:T.EH_GrpFlux)"
                            Foreground="#A8DADC" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
                 <UniformGrid Columns="3">
-                    <CheckBox x:Name="ChkCodecEnreg"      Content="$($script:T.EH_ChkCodecRec)"  IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkResolutionEnreg" Content="$($script:T.EH_ChkResRec)"    IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFPSEnreg"        Content="$($script:T.EH_ChkFpsRec)"   IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkCodecLive"       Content="$($script:T.EH_ChkCodecLive)" IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkResolutionLive"  Content="$($script:T.EH_ChkResLive)"   IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFPSLive"         Content="$($script:T.EH_ChkFpsLive)"  IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                    <CheckBox x:Name="ChkFluxSupp"        Content="$($script:T.EH_ChkFluxSupp)" IsChecked="True" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkCodecEnreg"      Content="$($script:T.EH_ChkCodecRec)"  IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkResolutionEnreg" Content="$($script:T.EH_ChkResRec)"    IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFPSEnreg"        Content="$($script:T.EH_ChkFpsRec)"   IsChecked="True"  Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkCodecLive"       Content="$($script:T.EH_ChkCodecLive)" IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkResolutionLive"  Content="$($script:T.EH_ChkResLive)"   IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFPSLive"         Content="$($script:T.EH_ChkFpsLive)"  IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
+                    <CheckBox x:Name="ChkFluxSupp"        Content="$($script:T.EH_ChkFluxSupp)" IsChecked="False" Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                 </UniformGrid>
             </StackPanel>
         </Border>
@@ -79,9 +79,9 @@ function Show-ExportColumnSelector {
             <StackPanel>
                 <TextBlock Text="$($script:T.EH_GrpOptions)"
                            Foreground="#CBA6F7" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
-                <CheckBox x:Name="ChkSnapshotJ7" Content="$($script:T.EH_ChkSnapshotJ7)" IsChecked="False"
+                <CheckBox x:Name="ChkSnapshotJ7" Content="$($script:T.EH_ChkSnapshotJ7)" IsChecked="True"
                           Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
-                <CheckBox x:Name="ChkSnapshot" Content="$($script:T.EH_ChkSnapshot)" IsChecked="False"
+                <CheckBox x:Name="ChkSnapshot" Content="$($script:T.EH_ChkSnapshot)" IsChecked="True"
                           Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
             </StackPanel>
         </Border>
@@ -440,7 +440,7 @@ function Export-HardwareReport {
     if (-not (Test-Path $Config.outputDirectory)) {
         New-Item -Path $Config.outputDirectory -ItemType Directory -Force | Out-Null
     }
-    $xlsxPath = Join-Path $Config.outputDirectory $script:T.XL_FileName
+    $xlsxPath = [System.IO.Path]::GetFullPath((Join-Path $Config.outputDirectory $script:T.XL_FileName))
 
     # Couleurs des groupes de colonnes — partagees entre le chemin COM et ImportExcel
     # Format COM : BGR (0xBBGGRR) — extrait en RGB pour System.Drawing / EPPlus
@@ -506,7 +506,7 @@ function Export-HardwareReport {
         & $Log 'Creation du fichier Excel via sous-processus...'
 
         # Calculer les valeurs de chaque camera (stream/retention deja en memoire)
-        $camValues = @()
+        $camValues = [System.Collections.Generic.List[pscustomobject]]::new()
         foreach ($cam in $camReport) {
             $epRow = [ordered]@{}
             $ip = if ($cam.Address -match '([0-9]{1,3}(?:\.[0-9]{1,3}){3})') { $Matches[1] } else { $cam.Address }
@@ -539,7 +539,7 @@ function Export-HardwareReport {
             }
             $epRow['__Snap']   = if ($snapColIndex   -gt 0 -and $snapPaths.ContainsKey($cam.Name))   { $snapPaths[$cam.Name]   } else { '' }
             $epRow['__SnapJ7'] = if ($snapJ7ColIndex -gt 0 -and $snapJ7Paths.ContainsKey($cam.Name)) { $snapJ7Paths[$cam.Name] } else { '' }
-            $camValues += [pscustomobject]$epRow
+            $camValues.Add([pscustomobject]$epRow)
         }
 
         # Tout le reste (creation xlsx, couleurs, bordures, snapshots) est fait
@@ -582,31 +582,28 @@ try {
     $chunk  = if ($rpp -gt 0) { $rpp } else { [Math]::Max(1,$total) }
     $pkg    = $null
     $start  = 0
-    $sidx   = 0
 
     while ($start -lt $total) {
         $end   = [Math]::Min($start + $chunk, $total)
         $cams  = @($d.Cameras[$start..($end-1)])
         $sname = if ($rpp -gt 0) { "$($d.SheetBase) $($start+1)-$end" } else { $d.SheetBase }
 
-        $rows = @()
+        $rowList = [System.Collections.Generic.List[pscustomobject]]::new()
         foreach ($cam in $cams) {
             $row = [ordered]@{}
             foreach ($col in $d.Columns) {
                 $row[$col.Header] = if ($col.Name -notin @('Snapshot','SnapshotJ7')) { [string]$cam.($col.Name) } else { '' }
             }
-            $rows += [pscustomobject]$row
+            $rowList.Add([pscustomobject]$row)
         }
+        $rows = $rowList.ToArray()
 
-        # -PassThru obligatoire sur tous les appels : sans lui, Export-Excel appelle
-        # Close-ExcelPackage qui sauvegarde ET dispose le package, rendant $pkg inutilisable.
         if ($null -eq $pkg) {
-            $pkg = $rows | Export-Excel -Path $d.XlsxPath -WorksheetName $sname -AutoSize -AutoFilter -BoldTopRow -ClearSheet -PassThru
+            $pkg = $rows | Export-Excel -Path $d.XlsxPath -WorksheetName $sname -AutoSize -AutoFilter -BoldTopRow -PassThru
         } else {
             $pkg = $rows | Export-Excel -ExcelPackage $pkg -WorksheetName $sname -AutoSize -AutoFilter -BoldTopRow -PassThru
         }
-        $sidx++
-        $ws = $pkg.Workbook.Worksheets[$sidx]
+        $ws = $pkg.Workbook.Worksheets[$pkg.Workbook.Worksheets.Count]
         if (-not $ws) { $start += $chunk; continue }
 
         $nbR = $end - $start
@@ -666,6 +663,11 @@ try {
 } finally { Remove-Item $J -Force -ErrorAction SilentlyContinue }
 '@
         Set-Content -Path $spPs1 -Value $spScript -Encoding UTF8
+
+        if (Test-Path $xlsxPath) {
+            try   { Remove-Item $xlsxPath -Force -ErrorAction Stop }
+            catch { & $Log "ATTENTION: Impossible de supprimer l'ancien fichier Excel. Fermez-le s'il est ouvert, puis relancez l'export." }
+        }
 
         try {
             $proc = Start-Process -FilePath 'powershell.exe' `

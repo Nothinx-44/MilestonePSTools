@@ -37,6 +37,7 @@ $script:T = @{
     SC_AllOk          = 'Toutes les dependances sont disponibles. Pret a lancer.'
     SC_OfflineMissing = "Impossible d'installer sans Internet. Voir le message ci-dessus."
     SC_NeedInstall    = 'Des dependances sont manquantes. Cliquez sur "Installer les dependances".'
+    SC_AutoInstalling = 'Installation automatique des dependances manquantes...'
     SC_NuGet          = 'Preparation du fournisseur NuGet...'
     SC_InstallingMod  = 'Installation de {0} depuis PowerShell Gallery...'
     SC_DownloadingMod = 'Telechargement de {0} pour usage offline...'

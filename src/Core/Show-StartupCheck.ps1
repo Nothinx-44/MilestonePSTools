@@ -578,10 +578,10 @@ function Show-StartupCheck {
                 [System.Windows.Media.Color]::FromRgb(249,168,37))
         }
         elseif ($script:_SC_IsOffline) {
-            $script:_SC_BtnInstall.Visibility = 'Collapsed'
-            $script:_SC_Status.Text = $script:T.SC_OfflineMissing
+            $script:_SC_BtnInstall.Visibility = 'Visible'
+            $script:_SC_Status.Text = $script:T.SC_NeedInstall
             $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-                [System.Windows.Media.Color]::FromRgb(243,139,168))
+                [System.Windows.Media.Color]::FromRgb(249,168,37))
         }
         else {
             $script:_SC_BtnInstall.Visibility = 'Visible'
@@ -830,6 +830,35 @@ function Show-StartupCheck {
                 ($script:T.SC_ErrCheck -f $_), $script:T.SC_ErrTitle, 'OK', 'Error'
             ) | Out-Null
         }
+
+        # Auto-installation si modules manquants et Internet accessible (test DNS rapide)
+        $anyMissing = ($script:_SC_Modules | Where-Object { -not $script:_SC_DepRows[$_.Name].Available }).Count -gt 0
+        if ($anyMissing) {
+            $hasInternet = $false
+            try { [System.Net.Dns]::GetHostEntry('www.powershellgallery.com') | Out-Null; $hasInternet = $true } catch {}
+
+            if ($hasInternet) {
+                $script:_SC_Status.Text = $script:T.SC_AutoInstalling
+                $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
+                    [System.Windows.Media.Color]::FromRgb(137,180,250))
+                & $script:_SC_Refresh
+                $script:_SC_Win.Dispatcher.BeginInvoke(
+                    [System.Windows.Threading.DispatcherPriority]::ContextIdle,
+                    [Action]{
+                        try   { & $script:_SC_Install }
+                        catch {
+                            [System.Windows.MessageBox]::Show(
+                                ($script:T.SC_ErrInstall -f $_), $script:T.SC_ErrTitle, 'OK', 'Error'
+                            ) | Out-Null
+                            $script:_SC_BtnInstall.IsEnabled = $true
+                            $script:_SC_BtnQuit.IsEnabled    = $true
+                            $script:_SC_Progress.Visibility  = 'Collapsed'
+                        }
+                    }
+                ) | Out-Null
+            }
+        }
+
         # Verification de mise a jour differee (apres rendu complet de la fenetre)
         $script:_SC_Win.Dispatcher.BeginInvoke(
             [System.Windows.Threading.DispatcherPriority]::ContextIdle,
