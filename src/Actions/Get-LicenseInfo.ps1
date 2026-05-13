@@ -6,7 +6,7 @@ function Get-VmsLicenseSummary {
 
     & $Log $script:T.LI_LogHeader
     try {
-        $products = @(Get-VmsLicensedProducts -ErrorAction Stop)
+        $products = @(Get-LicensedProducts -ErrorAction Stop)
 
         if ($products.Count -eq 0) {
             & $Log $script:T.LI_LogNone
@@ -44,32 +44,20 @@ function Get-VmsLicenseSummary {
                 & $Log ($script:T.LI_LogSlc -f $product.Slc)
             }
 
-            $licensed = $product.LicensedChannels
-            $used     = $product.UsedChannels
-
-            if ($null -ne $licensed) {
-                if ($null -ne $used -and $licensed -match '^\d+$' -and [int]$licensed -gt 0) {
-                    $pct = [math]::Round(([int]$used / [int]$licensed) * 100, 1)
-                    if ($pct -ge 90) {
-                        & $Log ($script:T.LI_LogChanWarn -f $used, $licensed, $pct)
-                    }
-                    else {
-                        & $Log ($script:T.LI_LogChan -f $used, $licensed, $pct)
-                    }
-                }
-                elseif ($null -ne $used) {
-                    & $Log ($script:T.LI_LogChanSingle -f $used, $licensed)
-                }
-                else {
-                    & $Log ($script:T.LI_LogChanRaw -f $licensed)
-                }
-            }
-
             foreach ($careProp in @('CarePlus','CarePremium')) {
                 $val = $product.$careProp
                 if ($val -and $val -ne 'N/A') {
                     & $Log ($script:T.LI_LogCareProp -f $careProp, $val)
                 }
+            }
+        }
+
+        # Detail des canaux par type (Get-LicenseDetails remplace LicensedChannels/UsedChannels)
+        $details = @(Get-LicenseDetails -ErrorAction SilentlyContinue)
+        if ($details.Count -gt 0) {
+            & $Log $script:T.LI_LogDetailHeader
+            foreach ($detail in $details) {
+                & $Log ($script:T.LI_LogDetail -f $detail.LicenseType, $detail.Activated, $detail.InGrace, $detail.NotLicensed)
             }
         }
     }
