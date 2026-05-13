@@ -7,7 +7,7 @@
 #Requires -Version 5.1
 
 # Version centrale — modifier ici uniquement
-$script:AppVersion = '4.9.0'
+$script:AppVersion = '4.9.1'
 
 # Applique TLS 1.2 des le debut du processus — requis par PowerShell Gallery.
 # PowerShell 5.1 utilise TLS 1.0 par defaut, ce qui bloque Install-Module / Save-Module.
@@ -89,34 +89,10 @@ function Invoke-AutoUpdate {
         $srcRoot = Get-ChildItem -Path $extract | Where-Object { $_.PSIsContainer } | Select-Object -First 1
         if (-not $srcRoot) { return }
 
-        $updaterScript = Join-Path $tempDir 'Update-Tool.ps1'
+        $updaterScript = Join-Path $AppRoot 'src\Core\Updater.ps1'
         $batPath = Join-Path $AppRoot 'Demarrer Milestone Toolkit.bat'
-        $scriptContent = @"
-param(
-    [string]
-    [string]
-    [string]
-)
-Start-Sleep -Seconds 2
-for ($i = 0; $i -lt 20; $i++) {
-    try {
-        Get-ChildItem -Path $args[0] -ErrorAction Stop | Out-Null
-        break
-    }
-    catch {
-        Start-Sleep -Milliseconds 250
-    }
-}
-try {
-    Copy-Item -Path (Join-Path $args[1] '*') -Destination $args[0] -Recurse -Force -ErrorAction Stop
-}
-catch {
-}
-Start-Process -FilePath $args[2]
-"@
-        Set-Content -Path $updaterScript -Value $scriptContent -Encoding UTF8
 
-        Start-Process -FilePath (Get-Command powershell).Source -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$updaterScript`"","`"$AppRoot`"","`"$($srcRoot.FullName)`"","`"$batPath`"" -WindowStyle Hidden
+        Start-Process -FilePath (Get-Command powershell).Source -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$updaterScript`"","`"$AppRoot`"","`"$($srcRoot.FullName)`"","`"$batPath`""
         exit 0
     }
     catch {

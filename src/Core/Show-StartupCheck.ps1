@@ -902,19 +902,8 @@ function Show-StartupCheck {
             $srcRoot = Get-ChildItem -Path $extract | Where-Object PSIsContainer | Select-Object -First 1
             if (-not $srcRoot) { throw 'Archive vide ou structure inattendue.' }
 
-            $updaterPath = Join-Path $tempDir 'Updater.ps1'
+            $updaterPath = Join-Path $script:_SC_AppRoot 'src\Core\Updater.ps1'
             $batPath     = Join-Path $script:_SC_AppRoot 'Demarrer Milestone Toolkit.bat'
-            $updaterContent = @'
-param([string]$Target, [string]$Source, [string]$Launcher)
-Start-Sleep -Seconds 2
-for ($i = 0; $i -lt 20; $i++) {
-    try { Get-ChildItem -Path $Target -ErrorAction Stop | Out-Null; break }
-    catch { Start-Sleep -Milliseconds 250 }
-}
-try { Copy-Item -Path (Join-Path $Source '*') -Destination $Target -Recurse -Force -ErrorAction Stop } catch {}
-if (Test-Path $Launcher) { Start-Process -FilePath $Launcher }
-'@
-            Set-Content -Path $updaterPath -Value $updaterContent -Encoding UTF8
 
             $ps = (Get-Command powershell -ErrorAction SilentlyContinue).Source
             if (-not $ps) { $ps = 'powershell.exe' }
@@ -923,8 +912,7 @@ if (Test-Path $Launcher) { Start-Process -FilePath $Launcher }
                               "`"$updaterPath`"",
                               "`"$($script:_SC_AppRoot)`"",
                               "`"$($srcRoot.FullName)`"",
-                              "`"$batPath`"" `
-                -WindowStyle Hidden
+                              "`"$batPath`""
 
             $script:_SC_Result = $false
             $script:_SC_Win.Close()
