@@ -248,15 +248,24 @@ function Show-StartupCheck {
         </StackPanel>
 
         <Border Grid.Row="4" Background="#181825" Padding="24,14">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="BtnQuit"    Content=""
-                        Style="{StaticResource SecondaryBtn}" Margin="0,0,10,0"/>
-                <Button x:Name="BtnInstall" Content=""
-                        Style="{StaticResource WarnBtn}"
-                        Visibility="Collapsed" Margin="0,0,10,0"/>
-                <Button x:Name="BtnLaunch"  Content=""
-                        Style="{StaticResource PrimaryBtn}" IsEnabled="False"/>
-            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Made by Vincent Le Bonhomme"
+                           FontSize="10" Foreground="#45475A"
+                           VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="BtnQuit"    Content=""
+                            Style="{StaticResource SecondaryBtn}" Margin="0,0,10,0"/>
+                    <Button x:Name="BtnInstall" Content=""
+                            Style="{StaticResource WarnBtn}"
+                            Visibility="Collapsed" Margin="0,0,10,0"/>
+                    <Button x:Name="BtnLaunch"  Content=""
+                            Style="{StaticResource PrimaryBtn}" IsEnabled="False"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

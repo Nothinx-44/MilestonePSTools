@@ -85,6 +85,10 @@ function Show-LanguagePicker {
             </Button>
         </StackPanel>
 
+        <TextBlock Text="Made by Vincent Le Bonhomme"
+                   FontSize="10" Foreground="#45475A"
+                   HorizontalAlignment="Center" Margin="0,20,0,0"/>
+
     </StackPanel>
 </Window>
 '@

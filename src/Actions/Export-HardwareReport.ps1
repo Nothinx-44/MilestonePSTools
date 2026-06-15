@@ -79,6 +79,8 @@ function Show-ExportColumnSelector {
             <StackPanel>
                 <TextBlock Text="$($script:T.EH_GrpOptions)"
                            Foreground="#CBA6F7" FontSize="12" FontWeight="Bold" Margin="0,0,0,6"/>
+                <CheckBox x:Name="ChkImagesRef" Content="$($script:T.EH_ChkImagesRef)" IsChecked="False"
+                          Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                 <CheckBox x:Name="ChkSnapshotJ7" Content="$($script:T.EH_ChkSnapshotJ7)" IsChecked="True"
                           Foreground="#CDD6F4" FontSize="12" Margin="4,5,4,5"/>
                 <CheckBox x:Name="ChkSnapshot" Content="$($script:T.EH_ChkSnapshot)" IsChecked="True"
@@ -214,9 +216,31 @@ function Show-ExportColumnSelector {
         'FPSLive'         = $window.FindName('ChkFPSLive')
         'FluxSupp'        = $window.FindName('ChkFluxSupp')
         'Retention'       = $window.FindName('ChkRetention')
+        'ImagesRef'       = $window.FindName('ChkImagesRef')
         'SnapshotJ7'      = $window.FindName('ChkSnapshotJ7')
         'Snapshot'        = $window.FindName('ChkSnapshot')
     }
+
+    # Demande a l'utilisateur de choisir le dossier des images de reference.
+    # Decoche la case si l'utilisateur annule la selection.
+    function Select-RefImagesFolder {
+        param([System.Windows.Controls.CheckBox]$Checkbox)
+        $dlg = [System.Windows.Forms.FolderBrowserDialog]::new()
+        $dlg.Description       = $script:T.EH_RefImagesFolderPrompt
+        $dlg.ShowNewFolderButton = $false
+        if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            $Checkbox.Tag = $dlg.SelectedPath
+            return $true
+        }
+        return $false
+    }
+
+    $checkboxes['ImagesRef'].Add_Click({
+        $chk = $checkboxes['ImagesRef']
+        if ($chk.IsChecked -eq $true -and -not (Select-RefImagesFolder -Checkbox $chk)) {
+            $chk.IsChecked = $false
+        }
+    })
 
     $window.FindName('BtnSelectAll').Add_Click({
         foreach ($chk in $checkboxes.Values) { $chk.IsChecked = $true }
@@ -227,6 +251,13 @@ function Show-ExportColumnSelector {
     })
 
     $window.FindName('BtnExport').Add_Click({
+        # Filet de securite : si la case est cochee via "Tout cocher" sans
+        # passer par son gestionnaire de clic, le dossier n'a pas ete choisi.
+        $chkRef = $checkboxes['ImagesRef']
+        if ($chkRef.IsChecked -eq $true -and [string]::IsNullOrWhiteSpace([string]$chkRef.Tag)) {
+            if (-not (Select-RefImagesFolder -Checkbox $chkRef)) { $chkRef.IsChecked = $false }
+        }
+
         $sel = [System.Collections.Generic.List[string]]::new()
         foreach ($name in $checkboxes.Keys) {
             if ($checkboxes[$name].IsChecked -eq $true) { $sel.Add($name) }
@@ -241,7 +272,7 @@ function Show-ExportColumnSelector {
         }
         $rppRaw = $window.FindName('CboRowsPerPage').SelectedItem.Content
         $rpp    = if ($rppRaw -eq $script:T.EH_RppUnlimited) { 0 } else { [int]$rppRaw }
-        $window.Tag = @{ Columns = [string[]]$sel; RowsPerPage = $rpp }
+        $window.Tag = @{ Columns = [string[]]$sel; RowsPerPage = $rpp; RefImagesFolder = [string]$chkRef.Tag }
         $window.DialogResult = $true
     })
 
@@ -276,6 +307,8 @@ function Export-HardwareReport {
     $includePassword    = $selectedColumns -contains 'MotDePasse'
     $includeSnapshots   = $selectedColumns -contains 'Snapshot'
     $includeSnapshotsJ7 = $selectedColumns -contains 'SnapshotJ7'
+    $includeRefImages   = $selectedColumns -contains 'ImagesRef'
+    $refImagesFolder    = $exportConfig.RefImagesFolder
     $needStreams       = ($selectedColumns | Where-Object {
         $_ -in 'CodecEnreg','ResolutionEnreg','FPSEnreg','CodecLive','ResolutionLive','FPSLive','FluxSupp'
     }).Count -gt 0
@@ -300,6 +333,7 @@ function Export-HardwareReport {
         @{ Name = 'FPSLive';         Group = 'stream'; Header = $script:T.XL_FpsLive }
         @{ Name = 'FluxSupp';        Group = 'stream'; Header = $script:T.XL_FluxSupp }
         @{ Name = 'Retention';    Group = 'ret';  Header = $script:T.XL_Retention }
+        @{ Name = 'ImagesRef';   Group = 'snap'; Header = $script:T.XL_ImagesRef }
         @{ Name = 'SnapshotJ7';  Group = 'snap'; Header = $script:T.XL_SnapshotJ7 }
         @{ Name = 'Snapshot';    Group = 'snap'; Header = $script:T.XL_Snapshot }
     )
@@ -308,9 +342,11 @@ function Export-HardwareReport {
 
     $snapColIndex   = 0
     $snapJ7ColIndex = 0
+    $refImgColIndex = 0
     for ($i = 0; $i -lt $activeColumns.Count; $i++) {
         if ($activeColumns[$i].Name -eq 'Snapshot')   { $snapColIndex   = $i + 1 }
         if ($activeColumns[$i].Name -eq 'SnapshotJ7') { $snapJ7ColIndex = $i + 1 }
+        if ($activeColumns[$i].Name -eq 'ImagesRef')  { $refImgColIndex = $i + 1 }
     }
 
     & $Log $script:T.EH_LogGenerating
@@ -437,6 +473,29 @@ function Export-HardwareReport {
         & $Log ($script:T.EH_LogSnapsDone -f $snapJ7Paths.Count, $j7Total)
     }
 
+    $refImgPaths = @{}
+    if ($includeRefImages -and $refImagesFolder -and (Test-Path $refImagesFolder)) {
+        & $Log ($script:T.EH_LogRefImages -f $refImagesFolder)
+        $refExtensions = @('.jpg', '.jpeg', '.png', '.bmp', '.gif')
+        $refFiles = @(Get-ChildItem -Path $refImagesFolder -File -ErrorAction SilentlyContinue |
+            Where-Object { $refExtensions -contains $_.Extension.ToLowerInvariant() })
+        $refTotal = $camReport.Count
+        foreach ($cam in $camReport) {
+            $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
+            # Correspond a "NomCamera.ext" ou "NomCamera_<suffixe>.ext" (ex. snapshots horodates)
+            $match = $refFiles | Where-Object {
+                $_.BaseName -eq $safeName -or $_.BaseName.StartsWith("${safeName}_", [System.StringComparison]::OrdinalIgnoreCase)
+            } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($match) {
+                $refImgPaths[$cam.Name] = $match.FullName
+                & $Log ($script:T.EH_LogSnapOk -f $refImgPaths.Count, $refTotal, $cam.Name)
+            } else {
+                & $Log ($script:T.EH_LogRefImgMissing -f $cam.Name)
+            }
+        }
+        & $Log ($script:T.EH_LogRefImagesDone -f $refImgPaths.Count, $refTotal)
+    }
+
     if (-not (Test-Path $Config.outputDirectory)) {
         New-Item -Path $Config.outputDirectory -ItemType Directory -Force | Out-Null
     }
@@ -539,6 +598,7 @@ function Export-HardwareReport {
             }
             $epRow['__Snap']   = if ($snapColIndex   -gt 0 -and $snapPaths.ContainsKey($cam.Name))   { $snapPaths[$cam.Name]   } else { '' }
             $epRow['__SnapJ7'] = if ($snapJ7ColIndex -gt 0 -and $snapJ7Paths.ContainsKey($cam.Name)) { $snapJ7Paths[$cam.Name] } else { '' }
+            $epRow['__RefImg'] = if ($refImgColIndex -gt 0 -and $refImgPaths.ContainsKey($cam.Name)) { $refImgPaths[$cam.Name] } else { '' }
             $camValues.Add([pscustomobject]$epRow)
         }
 
@@ -551,6 +611,7 @@ function Export-HardwareReport {
             RowsPerPage = $rowsPerPage
             SnapCol     = $snapColIndex
             SnapJ7Col   = $snapJ7ColIndex
+            RefImgCol   = $refImgColIndex
             GroupColors = @{
                 base   = @{ Bg = $groupColors.base.Bg;   Fg = $groupColors.base.Fg }
                 stream = @{ Bg = $groupColors.stream.Bg; Fg = $groupColors.stream.Fg }
@@ -592,7 +653,7 @@ try {
         foreach ($cam in $cams) {
             $row = [ordered]@{}
             foreach ($col in $d.Columns) {
-                $row[$col.Header] = if ($col.Name -notin @('Snapshot','SnapshotJ7')) { [string]$cam.($col.Name) } else { '' }
+                $row[$col.Header] = if ($col.Name -notin @('Snapshot','SnapshotJ7','ImagesRef')) { [string]$cam.($col.Name) } else { '' }
             }
             $rowList.Add([pscustomobject]$row)
         }
@@ -635,6 +696,7 @@ try {
         # Snapshots — largeur colonne en characterWidth EPPlus (≈ 7px/char a 96dpi)
         # 194px / 7 ≈ 27.7 → 28. Hauteur en points : 90pt * 1.333 ≈ 120px > 118px image.
         foreach ($sd in @(
+            @{ Col=[int]$d.RefImgCol; Key='__RefImg' }
             @{ Col=[int]$d.SnapJ7Col; Key='__SnapJ7' }
             @{ Col=[int]$d.SnapCol;   Key='__Snap'   }
         )) {
@@ -715,8 +777,9 @@ try {
         param([object]$sh, [int]$lastRow)
         if ($snapColIndex   -gt 0) { $sh.Columns.Item($snapColIndex).ColumnWidth   = 28 }
         if ($snapJ7ColIndex -gt 0) { $sh.Columns.Item($snapJ7ColIndex).ColumnWidth = 28 }
+        if ($refImgColIndex -gt 0) { $sh.Columns.Item($refImgColIndex).ColumnWidth = 28 }
         for ($c = 1; $c -le $activeColumns.Count; $c++) {
-            if ($c -ne $snapColIndex -and $c -ne $snapJ7ColIndex) { $sh.Columns.Item($c).AutoFit() | Out-Null }
+            if ($c -ne $snapColIndex -and $c -ne $snapJ7ColIndex -and $c -ne $refImgColIndex) { $sh.Columns.Item($c).AutoFit() | Out-Null }
         }
         if ($lastRow -ge 2) {
             $rng = $sh.Range($sh.Cells.Item(1, 1), $sh.Cells.Item($lastRow, $activeColumns.Count))
@@ -801,7 +864,7 @@ try {
 
             for ($c = 0; $c -lt $activeColumns.Count; $c++) {
                 $colName = $activeColumns[$c].Name
-                if ($colName -in 'Snapshot','SnapshotJ7') { continue }
+                if ($colName -in 'Snapshot','SnapshotJ7','ImagesRef') { continue }
                 $sheet.Cells.Item($row, $c + 1) = $values[$colName]
             }
 
@@ -812,11 +875,12 @@ try {
                 $sheet.Cells.Item($row, $activeColumns.Count)
             ).Interior.Color = $rowBg
 
-            # Snapshots : J-7 puis Live
-            if ($snapColIndex -gt 0 -or $snapJ7ColIndex -gt 0) {
+            # Images : reference, puis J-7, puis Live
+            if ($snapColIndex -gt 0 -or $snapJ7ColIndex -gt 0 -or $refImgColIndex -gt 0) {
                 $sheet.Rows.Item($row).RowHeight = 90
             }
             foreach ($snapDef in @(
+                @{ Idx = $refImgColIndex; Paths = $refImgPaths }
                 @{ Idx = $snapJ7ColIndex; Paths = $snapJ7Paths }
                 @{ Idx = $snapColIndex;   Paths = $snapPaths   }
             )) {
