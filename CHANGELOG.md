@@ -5,9 +5,6 @@
 ### Nouveautes
 - Export Hardware : nouvelle option "Images de référence" dans le groupe Options. Permet de sélectionner un dossier sur le poste contenant une image par caméra (fichier nommé `NomCamera.ext` ou `NomCamera_<suffixe>.ext`, ex. snapshots horodatés — le plus récent est utilisé en cas de doublon). Ces images sont insérées dans une colonne dédiée du rapport Excel, selon le même fonctionnement que les colonnes Snapshot J-7 et Snapshot Live.
 
-### Ameliorations
-- Ajout d'un crédit "Made by Vincent Le Bonhomme" dans le pied de page de la fenêtre principale, l'écran de démarrage et le sélecteur de langue.
-
 ## v4.7.1
 > Correctifs de compatibilite PSTools et export Excel sans Office
 
