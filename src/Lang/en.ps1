@@ -208,7 +208,9 @@ $script:T = @{
     EH_LogCamRow      = '[{0}/{1}] {2}'
     EH_LogImgErr      = "  WARNING: Image '{0}' : {1}"
     EH_LogSaved       = 'Report exported: {0}'
-    EH_LogNoExcel     = 'ERROR: Excel is not installed on this machine.'
+    EH_LogNoExcel       = 'WARNING: Excel not detected on this machine. Trying ImportExcel...'
+    EH_LogSubproc       = 'Creating Excel file via subprocess...'
+    EH_LogExcelLocked   = 'WARNING: Cannot delete the previous Excel file. Close it if open, then re-run the export.'
 
     # CAMERA STATUS
     CS_LogQuerying  = 'Querying Event Server...'
@@ -229,7 +231,8 @@ $script:T = @{
 
     # PLAYBACK REPORT
     PR_LogCams      = 'Retrieving cameras...'
-    PR_LogFound     = '{0} cameras found. Retrieving recording ranges...'
+    PR_LogFound        = '{0} cameras found. Querying SDK in parallel...'
+    PR_LogDataReceived = '{0} results received. Processing...'
     PR_LogError     = 'ERROR: Get-PlaybackInfo: {0}'
     PR_LogCancelled = 'WARNING: Operation cancelled after {0} / {1}.'
     PR_LogRow       = '  {0}: {1} -> {2} ({3})'
@@ -253,6 +256,7 @@ $script:T = @{
     RS_LogRecWarn   = '  WARNING: Recording stats: {0}'
     RS_LogMot       = '  Motion: {0} sequences | {1}'
     RS_LogMotWarn   = '  WARNING: Motion stats: {0}'
+    RS_LogLiveWarn  = '  WARNING: Live stats: {0}'
     RS_LogLive      = '  Live: {0} FPS | {1} kbps | {2}'
     RS_LogExported  = 'Report exported: {0}'
     RS_CsvNom       = 'Name'
@@ -275,7 +279,6 @@ $script:T = @{
     SA_LogHistorique = 'Historical mode: {0}'
     SA_LogCancelled  = 'WARNING: Operation cancelled before launch.'
     SA_LogOk         = '  [OK {0}/{1}] {2}'
-    SA_LogFailed     = "  WARNING: Snapshot failed '{0}'"
     SA_LogError      = "  ERROR '{0}': {1}"
     SA_LogDone       = '{0} snapshots saved in: {1}'
     SA_LogDoneErr    = '{0} snapshots saved, {1} failed in: {2}'

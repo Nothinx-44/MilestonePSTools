@@ -50,7 +50,7 @@ function Initialize-RequiredModules {
                     if (-not (Test-Path $localModulePath)) { New-Item -ItemType Directory -Path $localModulePath -Force | Out-Null }
                     $children = Get-ChildItem -Path $tempExtract
                     if (($children.Count -eq 1) -and ($children[0].PSIsContainer)) {
-                        Copy-Item -Path (Join-Path $tempExtract $children[0].Name)\* -Destination $localModulePath -Recurse -Force
+                        Copy-Item -Path (Join-Path $tempExtract $children[0].Name '*') -Destination $localModulePath -Recurse -Force
                     }
                     else {
                         Copy-Item -Path (Join-Path $tempExtract '*') -Destination $localModulePath -Recurse -Force

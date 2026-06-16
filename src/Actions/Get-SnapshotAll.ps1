@@ -43,7 +43,7 @@ function Get-SnapshotAll {
             & $Log ($script:T.SA_LogOk -f $received, $total, $cam.Name)
         } catch {
             $errors++
-            & $Log ($script:T.SA_LogFailed -f $cam.Name)
+            & $Log ($script:T.SA_LogError -f $cam.Name, $_)
         }
 
         & $ReportProgress ($i + 1) $total

@@ -458,7 +458,7 @@ function Show-StartupCheck {
             $headers = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
             $release = Invoke-RestMethod `
                 -Uri "https://api.github.com/repos/$($cfg.autoUpdate.repo)/releases/latest" `
-                -Headers $headers -ErrorAction Stop
+                -Headers $headers -TimeoutSec 10 -ErrorAction Stop
         }
         catch {
             $script:_SC_AppStatus.Text = $script:T.SC_AppVerNetErr
@@ -570,21 +570,12 @@ function Show-StartupCheck {
             $script:_SC_BtnSaveDeps.Visibility      = 'Visible'
         }
 
-        $anyUpdate = $script:_SC_Modules | Where-Object { $_.UpdateAvailable }
-
-        if ($allOk -and -not $anyUpdate) {
+        if ($allOk) {
             $script:_SC_BtnLaunch.IsEnabled   = $true
             $script:_SC_BtnInstall.Visibility = 'Collapsed'
             $script:_SC_Status.Text = $script:T.SC_AllOk
             $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
                 [System.Windows.Media.Color]::FromRgb(166,227,161))
-        }
-        elseif ($allOk -and $anyUpdate -and -not $script:_SC_IsOffline) {
-            $script:_SC_BtnLaunch.IsEnabled   = $true
-            $script:_SC_BtnInstall.Visibility = 'Visible'
-            $script:_SC_Status.Text = $script:T.SC_UpdateAvailableSummary
-            $script:_SC_Status.Foreground = [System.Windows.Media.SolidColorBrush]::new(
-                [System.Windows.Media.Color]::FromRgb(249,168,37))
         }
         elseif ($script:_SC_IsOffline) {
             $script:_SC_BtnInstall.Visibility = 'Visible'
@@ -610,62 +601,6 @@ function Show-StartupCheck {
         # NuGet requis pour Install-Module
         $null = Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 `
             -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-    }
-
-    # Telechargement direct depuis l'API NuGet PSGallery
-    # N'utilise que Invoke-WebRequest + ZipFile .NET — aucune dependance PowerShellGet/NuGet
-    $script:_SC_DownloadModuleNuGet = {
-        param([string]$ModuleName, [string]$DestFolder)
-
-        $ProgressPreference = 'SilentlyContinue'
-
-        # TLS 1.2 obligatoire
-        [Net.ServicePointManager]::SecurityProtocol =
-            [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-
-        $nupkgUrl    = "https://www.powershellgallery.com/api/v2/package/$ModuleName"
-        $tempNupkg   = Join-Path $env:TEMP "$ModuleName.nupkg"
-        $tempExtract = Join-Path $env:TEMP "$ModuleName.extracted"
-
-        # Etape 1 — telechargement
-        try {
-            Invoke-WebRequest -Uri $nupkgUrl -OutFile $tempNupkg -UseBasicParsing -ErrorAction Stop
-        }
-        catch {
-            throw "[Etape 1 - Telechargement] $($_.Exception.GetType().Name): $($_.Exception.Message)"
-        }
-
-        if (-not (Test-Path $tempNupkg) -or (Get-Item $tempNupkg).Length -eq 0) {
-            throw "[Etape 1] Fichier telecharge vide ou absent : $tempNupkg"
-        }
-
-        # Etape 2 — extraction ZIP
-        try {
-            if (Test-Path $tempExtract) { Remove-Item $tempExtract -Recurse -Force }
-            Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-            [System.IO.Compression.ZipFile]::ExtractToDirectory($tempNupkg, $tempExtract)
-        }
-        catch {
-            throw "[Etape 2 - Extraction] $($_.Exception.GetType().Name): $($_.Exception.Message)"
-        }
-
-        # Etape 3 — copie des fichiers du module (sans les metadonnees NuGet)
-        try {
-            $excludeNames = @('[Content_Types].xml')
-            $excludeExts  = @('.nuspec', '.psmdcp')
-            $excludeDirs  = @('_rels', 'package')
-            Get-ChildItem $tempExtract | Where-Object {
-                $_.Name      -notin $excludeNames -and
-                $_.Extension -notin $excludeExts  -and
-                $_.Name      -notin $excludeDirs
-            } | Copy-Item -Destination $DestFolder -Recurse -Force -ErrorAction Stop
-        }
-        catch {
-            throw "[Etape 3 - Copie] $($_.Exception.GetType().Name): $($_.Exception.Message)"
-        }
-
-        # Nettoyage
-        Remove-Item $tempNupkg, $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $script:_SC_Install = {

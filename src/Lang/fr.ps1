@@ -103,7 +103,7 @@ $script:T = @{
     App_OutputDir       = 'Repertoire de sortie : {0}'
     App_ActionDone      = 'Action terminee avec succes.'
     App_ActionCancelled = 'Operation annulee.'
-    App_Closing         = 'Fermeture de l application'
+    App_Closing         = "Fermeture de l'application"
 
     # ACTION NAMES
     Act_SnapshotSel  = 'Snapshot - Selection'
@@ -112,7 +112,7 @@ $script:T = @{
     Act_ExportHW     = 'Export Hardware'
     Act_GroupModel   = 'Grouper par Modele'
     Act_CamStatus    = 'Etat des cameras'
-    Act_Playback     = "Dates d enregistrement"
+    Act_Playback     = "Dates d'enregistrement"
     Act_RecStats     = 'Stats Enregistrement (7 jours)'
     Act_License      = 'Informations Licence'
 
@@ -208,7 +208,9 @@ $script:T = @{
     EH_LogCamRow      = '[{0}/{1}] {2}'
     EH_LogImgErr      = "  AVERTISSEMENT: Image '{0}' : {1}"
     EH_LogSaved       = 'Rapport exporte : {0}'
-    EH_LogNoExcel     = "ERREUR: Excel n'est pas installe sur ce poste."
+    EH_LogNoExcel       = "AVERTISSEMENT: Excel non detecte sur ce poste. Tentative via ImportExcel..."
+    EH_LogSubproc       = 'Creation du fichier Excel via sous-processus...'
+    EH_LogExcelLocked   = "ATTENTION: Impossible de supprimer l'ancien fichier Excel. Fermez-le s'il est ouvert, puis relancez l'export."
 
     # CAMERA STATUS
     CS_LogQuerying  = "Interrogation de l'Event Server..."
@@ -229,7 +231,8 @@ $script:T = @{
 
     # PLAYBACK REPORT
     PR_LogCams      = 'Recuperation des cameras...'
-    PR_LogFound     = '{0} cameras trouvees. Recuperation des plages d enregistrement...'
+    PR_LogFound     = "{0} cameras trouvees. Interrogation du SDK en parallele..."
+    PR_LogDataReceived = '{0} resultats recus. Traitement...'
     PR_LogError     = 'ERREUR: Get-PlaybackInfo : {0}'
     PR_LogCancelled = 'AVERTISSEMENT: Operation annulee apres {0} / {1}.'
     PR_LogRow       = '  {0} : {1} -> {2} ({3})'
@@ -253,6 +256,7 @@ $script:T = @{
     RS_LogRecWarn   = '  AVERTISSEMENT: Stats enregistrement : {0}'
     RS_LogMot       = '  Motion : {0} sequences | {1}'
     RS_LogMotWarn   = '  AVERTISSEMENT: Stats mouvement : {0}'
+    RS_LogLiveWarn  = '  AVERTISSEMENT: Stats live : {0}'
     RS_LogLive      = '  Live   : {0} FPS | {1} kbps | {2}'
     RS_LogExported  = 'Rapport exporte : {0}'
     RS_CsvNom       = 'Nom'
@@ -275,7 +279,6 @@ $script:T = @{
     SA_LogHistorique = 'Mode historique : {0}'
     SA_LogCancelled = 'AVERTISSEMENT: Operation annulee avant lancement.'
     SA_LogOk        = '  [OK {0}/{1}] {2}'
-    SA_LogFailed    = "  AVERTISSEMENT: Echec snapshot '{0}'"
     SA_LogError     = "  ERREUR '{0}': {1}"
     SA_LogDone      = '{0} snapshots enregistres dans : {1}'
     SA_LogDoneErr   = '{0} snapshots enregistres, {1} echecs dans : {2}'

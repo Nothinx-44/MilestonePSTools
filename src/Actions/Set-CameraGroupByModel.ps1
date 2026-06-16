@@ -38,10 +38,13 @@ function Set-CameraGroupByModel {
                 $deviceGroup = New-VmsDeviceGroup -ParentGroup $parentFolder -Name $model -ErrorAction Stop
             }
 
+            $existingIds = [System.Collections.Generic.HashSet[string]]::new(
+                [System.StringComparer]::OrdinalIgnoreCase)
+            Get-VmsDeviceGroupMember -Group $deviceGroup -ErrorAction SilentlyContinue |
+                ForEach-Object { $existingIds.Add($_.Id) | Out-Null }
+
             foreach ($camera in $group.Group) {
-                $alreadyMember = Get-VmsDeviceGroupMember -Group $deviceGroup -ErrorAction SilentlyContinue |
-                    Where-Object { $_.Id -eq $camera.Id }
-                if (-not $alreadyMember) {
+                if (-not $existingIds.Contains($camera.Id)) {
                     Add-VmsDeviceGroupMember -Group $deviceGroup -DeviceId $camera.Id -ErrorAction Stop
                 }
             }

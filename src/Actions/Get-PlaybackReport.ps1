@@ -17,6 +17,7 @@ function Get-PlaybackReport {
 
     try {
         $playbackData = @($cameras | Get-PlaybackInfo -Parallel -ErrorAction Stop)
+        & $Log ($script:T.PR_LogDataReceived -f $playbackData.Count)
     }
     catch {
         & $Log ($script:T.PR_LogError -f $_)

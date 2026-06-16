@@ -12,7 +12,7 @@ param(
 
 $script:AppRoot    = $RootPath
 $script:SrcPath    = Join-Path $AppRoot 'src'
-$script:AppVersion = '4.9.4'  # Synchronise avec Bootstrap.ps1
+$script:AppVersion = '4.9.7'  # Synchronise avec Bootstrap.ps1
 
 # Chargement de la langue
 . (Join-Path $script:SrcPath "Lang/$Lang.ps1")
@@ -250,6 +250,9 @@ function Write-UILog {
     $para.Margin     = [System.Windows.Thickness]::new(0)
     $para.LineHeight = 20
     $script:LogOutput.Document.Blocks.Add($para)
+    if ($script:LogOutput.Document.Blocks.Count -gt 2000) {
+        $script:LogOutput.Document.Blocks.Remove($script:LogOutput.Document.Blocks.FirstBlock)
+    }
     $script:LogOutput.ScrollToEnd()
 
     [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
@@ -318,8 +321,9 @@ function Invoke-Action {
 
 $logCallback = {
     param([string]$Message)
-    $level = if ($Message -match '^ERREUR|^ERROR')           { 'ERROR' }
-             elseif ($Message -match '^AVERTISSEMENT|^WARN') { 'WARN'  }
+    $trimmed = $Message.TrimStart()
+    $level = if ($trimmed -match '^ERREUR|^ERROR')           { 'ERROR' }
+             elseif ($trimmed -match '^AVERTISSEMENT|^WARN') { 'WARN'  }
              else                                            { 'INFO'  }
     Write-UILog -Message $Message -Level $level
 }

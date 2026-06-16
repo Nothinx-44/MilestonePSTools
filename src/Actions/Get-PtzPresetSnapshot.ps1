@@ -52,11 +52,13 @@ function Get-PtzPresetSnapshot {
 
             & $Log $script:T.PTZ_LogCapturing
             try {
+                $safeCam    = $camera.Name    -replace '[\\/:*?"<>|]', '_'
+                $safePreset = $ptzPreset.Name -replace '[\\/:*?"<>|]', '_'
                 $snapParams = @{
                     Quality  = $Config.snapshotQuality
                     Save     = $true
                     Path     = $outputDir
-                    FileName = "$($camera.Name) -- $($ptzPreset.Name).jpg"
+                    FileName = "$safeCam -- $safePreset.jpg"
                 }
                 if ($SnapshotTime) {
                     $camera | Get-Snapshot @snapParams -Behavior GetNearest -Time $SnapshotTime

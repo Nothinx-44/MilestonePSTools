@@ -1,9 +1,60 @@
 # Release Notes
 
+## v4.9.7
+> Troisieme audit qualite — annulation, erreurs cachees et traductions manquantes
+
+### Corrections
+- **Get-SnapshotAll.ps1** : le bloc `catch` utilisait `SA_LogFailed` qui n'affichait que le nom de la camera, sans le motif de l'echec. Remplace par `SA_LogError` (cle `"{0}": {1}` deja definie mais jamais utilisee) — l'erreur exacte est maintenant visible dans le journal.
+- **fr.ps1 / en.ps1** : suppression de la cle `SA_LogFailed` devenue inutilisee apres le correctif ci-dessus.
+- **Export-HardwareReport.ps1** : deux messages log etaient hardcodes en francais dans le chemin ImportExcel (`'Creation du fichier Excel via sous-processus...'` et `"ATTENTION: Impossible de supprimer l'ancien fichier Excel..."`). Remplaces par les nouvelles cles `EH_LogSubproc` et `EH_LogExcelLocked` (ajoutees dans fr.ps1 et en.ps1).
+- **Export-HardwareReport.ps1** : les trois boucles de pre-capture du chemin ImportExcel (snapshot live, snapshot J-7, images de reference) n'appelaient jamais `$Cancel`. L'utilisateur pouvait cliquer "Annuler" sans effet pendant le telechargement des images. Ajout de `if (& $Cancel) { break }` en tete de chaque boucle — comportement coherent avec le chemin COM.
+- **Get-PlaybackReport.ps1** : `Get-PlaybackInfo -Parallel` est un appel bloquant (30-60 s sur de grands systemes). Aucun message n'etait affiche pendant ce temps. Ajout d'un log apres le retour de l'appel (`PR_LogDataReceived`) pour signaler la fin de l'attente et le debut du traitement par camera. Cle ajoutee dans fr.ps1 et en.ps1.
+
+---
+
+## v4.9.6
+> Deuxieme audit qualite — nettoyage de code mort, performance, UX et robustesse
+
+### Corrections
+- **fr.ps1** : trois apostrophes manquantes corrigees — `App_Closing` (`l'application`), `Act_Playback` (`Dates d'enregistrement`), `PR_LogFound` (`plages d'enregistrement`). Ces clés etaient differentes des corrections du tour precedent.
+- **Updater.ps1** : le `catch {}` silencieux sur `Copy-Item` est remplace par un log dans `%TEMP%\MilestoneToolkitUpdate_error.txt`. Si la copie des fichiers de mise a jour echoue (fichier verrouille, droits insuffisants), l'erreur est maintenant tracee au lieu de passer inapercue.
+- **Initialize-Modules.ps1 line 53** : `(Join-Path ...)\*` remplace par `(Join-Path ... '*')` — forme idiomatique et coherente avec la ligne 56 du meme fichier.
+
+### Nettoyage de code mort
+- **Bootstrap.ps1** : suppression des fonctions `Invoke-AutoUpdate`, `Get-GitHubLatestRelease` et `Get-ComparableVersion` (77 lignes) — jamais appelees depuis Bootstrap.ps1 ; la verification de mise a jour est assuree par Show-StartupCheck.
+- **Show-StartupCheck.ps1** : suppression du scriptblock `$script:_SC_DownloadModuleNuGet` (54 lignes) — defini mais jamais reference nulle part dans le projet.
+
+### Ameliorations
+- **Bootstrap.ps1** — persistence de la langue : la langue choisie au selecteur est sauvegardee dans `config.json` (cle `language`). Aux prochains demarrages, le selecteur est ignore et la langue sauvegardee est utilisee directement.
+- **Set-CameraGroupByModel.ps1** — complexite O(n×m) -> O(n+m) : `Get-VmsDeviceGroupMember` est desormais appele une seule fois par groupe (et non une fois par camera). Les IDs existants sont charges dans un `HashSet` avant la boucle — irrelevant sur les petits systemes, significatif sur les grandes installations.
+- **Invoke-PtzPreset.ps1** — l'attente de 2 500 ms apres repositionnement PTZ ne bloque plus le thread UI. Remplace par une boucle de 50 ms pompant le `Dispatcher` WPF, ce qui maintient l'interface reactive pendant la stabilisation de la camera.
+- **Save-Dependencies.ps1** : TLS 1.2 force en debut de script — requis par PowerShell Gallery sous PS 5.1.
+
+---
+
+## v4.9.5
+> Correctifs qualite et robustesse — audit complet du code
+
+### Corrections
+
+- **Bootstrap.ps1** : ajout de `-TimeoutSec 10` sur `Invoke-RestMethod` pour eviter un blocage indefini si l'API GitHub ne repond pas.
+- **Show-StartupCheck.ps1** : meme correctif sur `Invoke-RestMethod` pour la verification de mise a jour au demarrage.
+- **Show-StartupCheck.ps1** : suppression d'une branche morte (`elseif ($allOk -and $anyUpdate ...)`) — la propriete `UpdateAvailable` n'etait jamais definie sur les objets module, rendant cette branche inatteignable.
+- **Write-ActivityLog.ps1** : remplacement de `Add-Content -Encoding UTF8` (ecrit UTF-8 avec BOM sous PowerShell 5.1) par `[System.IO.File]::AppendAllText` avec `UTF8Encoding($false)` — les fichiers de log sont desormais UTF-8 sans BOM.
+- **App.ps1** — logCallback : ajout de `.TrimStart()` avant le matching regex `^ERREUR` / `^AVERTISSEMENT`. Les messages indentes (ex : `  ERREUR: ...`) etaient incorrectement classes comme INFO et affiches en blanc au lieu du rouge/jaune attendu.
+- **App.ps1** — Write-UILog : limitation du journal a 2 000 entrees. Au-dela, la plus ancienne ligne est supprimee pour eviter l'accumulation memoire sur les longues sessions.
+- **Get-RecordingStats.ps1** : le bloc `catch {}` silencieux sur `Get-VideoDeviceStatistics` est remplace par un log AVERTISSEMENT (`RS_LogLiveWarn`) — coherent avec les blocs catch des stats enregistrement et mouvement.
+- **Get-PtzPresetSnapshot.ps1** : sanitisation du nom de fichier des snapshots PTZ — les noms de camera et de preset contenant des caracteres invalides (`\ / : * ? " < > |`) sont maintenant remplaces par `_` avant construction du nom de fichier.
+- **fr.ps1 / en.ps1** — `EH_LogNoExcel` : corrige le prefixe `ERREUR:` en `AVERTISSEMENT:` — Excel absent n'est pas une erreur fatale puisque le fallback ImportExcel suit immediatement.
+- **fr.ps1 / en.ps1** : ajout de la cle `RS_LogLiveWarn` utilisee par le correctif Get-RecordingStats.
+
+---
+
 ## v4.9.4
 
 ### Nouveautes
 - Export Hardware : nouvelle option "Images de référence" dans le groupe Options. Permet de sélectionner un dossier sur le poste contenant une image par caméra (fichier nommé `NomCamera.ext` ou `NomCamera_<suffixe>.ext`, ex. snapshots horodatés — le plus récent est utilisé en cas de doublon). Ces images sont insérées dans une colonne dédiée du rapport Excel, selon le même fonctionnement que les colonnes Snapshot J-7 et Snapshot Live.
+
 
 ## v4.7.1
 > Correctifs de compatibilite PSTools et export Excel sans Office

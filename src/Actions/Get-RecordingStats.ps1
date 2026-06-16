@@ -88,7 +88,7 @@ function Get-RecordingStats {
                 & $Log ($script:T.RS_LogLive -f $fps, $bps, $res)
             }
         }
-        catch {}
+        catch { & $Log ($script:T.RS_LogLiveWarn -f $_) }
 
         $rows.Add($row)
     }

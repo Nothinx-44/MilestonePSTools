@@ -421,6 +421,7 @@ function Export-HardwareReport {
         $snapTotal = $camReport.Count
 
         foreach ($cam in $camReport) {
+            if (& $Cancel) { break }
             $vmsCamera = $vmsCamByName[$cam.Name]
             if (-not $vmsCamera) { continue }
 
@@ -456,6 +457,7 @@ function Export-HardwareReport {
 
         $j7Total = $camReport.Count ; $j7Recv = 0
         foreach ($cam in $camReport) {
+            if (& $Cancel) { break }
             $vmsCamera = $vmsCamByName[$cam.Name]
             if (-not $vmsCamera) { continue }
             $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
@@ -481,6 +483,7 @@ function Export-HardwareReport {
             Where-Object { $refExtensions -contains $_.Extension.ToLowerInvariant() })
         $refTotal = $camReport.Count
         foreach ($cam in $camReport) {
+            if (& $Cancel) { break }
             $safeName = $cam.Name -replace '[\\/:*?"<>|]', '_'
             # Correspond a "NomCamera.ext" ou "NomCamera_<suffixe>.ext" (ex. snapshots horodates)
             $match = $refFiles | Where-Object {
@@ -562,7 +565,7 @@ function Export-HardwareReport {
         # Export-Excel depuis le contexte WPF+MilestonePSTools provoque des
         # erreurs EPPlus internes. Le subprocess cree le xlsx de zero.
         # ---------------------------------------------------------------
-        & $Log 'Creation du fichier Excel via sous-processus...'
+        & $Log $script:T.EH_LogSubproc
 
         # Calculer les valeurs de chaque camera (stream/retention deja en memoire)
         $camValues = [System.Collections.Generic.List[pscustomobject]]::new()
@@ -728,7 +731,7 @@ try {
 
         if (Test-Path $xlsxPath) {
             try   { Remove-Item $xlsxPath -Force -ErrorAction Stop }
-            catch { & $Log "ATTENTION: Impossible de supprimer l'ancien fichier Excel. Fermez-le s'il est ouvert, puis relancez l'export." }
+            catch { & $Log $script:T.EH_LogExcelLocked }
         }
 
         try {

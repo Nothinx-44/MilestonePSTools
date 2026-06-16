@@ -75,7 +75,14 @@ function Invoke-PtzPreset {
 
             if ($xDiff -le $Tolerance -and $yDiff -le $Tolerance -and $zDiff -le $Tolerance) {
                 $positionReached = $true
-                Start-Sleep -Milliseconds 2500
+                # Attente de stabilisation sans bloquer le thread UI
+                $dispatcher = [System.Windows.Threading.Dispatcher]::CurrentDispatcher
+                $deadline   = [DateTime]::UtcNow.AddMilliseconds(2500)
+                while ([DateTime]::UtcNow -lt $deadline) {
+                    $dispatcher.Invoke(
+                        [System.Windows.Threading.DispatcherPriority]::Background, [Action]{})
+                    Start-Sleep -Milliseconds 50
+                }
                 break
             }
 
