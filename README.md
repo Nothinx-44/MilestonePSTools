@@ -96,7 +96,7 @@ Le module est telecharge automatiquement depuis PowerShell Gallery. Aucune actio
 1. Sur une machine **avec** Internet, cliquer **Preparer offline** dans l'ecran de demarrage
 2. Copier le projet entier (avec `Dependencies/`) sur la machine cible
 3. Lancer normalement — le mode Offline est detecte automatiquement
-<img width="559" height="515" alt="image" src="https://github.com/user-attachments/assets/43cd7c30-020b-4fba-a45a-e524bd20feec" />
+<img width="562" height="608" alt="image" src="https://github.com/user-attachments/assets/da83ab43-56b6-4d38-97b6-607831601588" />
 
 ---
 
