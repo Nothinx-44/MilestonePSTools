@@ -46,7 +46,8 @@ Toutes les actions snapshot supportent deux modes :
 | Action | Description |
 |--------|-------------|
 | **Export Hardware** | Rapport Excel configurable : fenetre de selection des colonnes a inclure (hardware, flux video, retention, snapshot). Les mots de passe sont exclus par defaut et ne s'affichent que si la colonne est explicitement cochee. |
-<img width="513" height="556" alt="image" src="https://github.com/user-attachments/assets/d8bb88fe-1b12-4ec0-b948-c56892808e2f" />
+<img width="513" height="682" alt="image" src="https://github.com/user-attachments/assets/5bb4cf19-e0f3-4684-9fce-6d1d328feff4" />
+
 
 | **Grouper par Modele** | Cree des groupes de cameras dans Milestone organises par modele |
 
