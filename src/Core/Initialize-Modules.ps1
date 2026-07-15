@@ -24,14 +24,10 @@ function Initialize-RequiredModules {
         [scriptblock]$Log = { param($Message) Write-Host $Message }
     )
 
-    $modules = @(
-        @{ Name = 'MilestonePSTools'; Required = $true }
-        @{ Name = 'ImportExcel';    Required = $true }
-    )
+    $modules = Get-RequiredModules
 
     foreach ($mod in $modules) {
         $name     = $mod.Name
-        $required = $mod.Required -ne $false
         $importedFromLocal = $false
 
         # --- Tentative de chargement depuis le dossier Dependencies/ ---
@@ -50,7 +46,8 @@ function Initialize-RequiredModules {
                     if (-not (Test-Path $localModulePath)) { New-Item -ItemType Directory -Path $localModulePath -Force | Out-Null }
                     $children = Get-ChildItem -Path $tempExtract
                     if (($children.Count -eq 1) -and ($children[0].PSIsContainer)) {
-                        Copy-Item -Path (Join-Path $tempExtract $children[0].Name '*') -Destination $localModulePath -Recurse -Force
+                        $innerDir = Join-Path $tempExtract $children[0].Name
+                        Copy-Item -Path (Join-Path $innerDir '*') -Destination $localModulePath -Recurse -Force
                     }
                     else {
                         Copy-Item -Path (Join-Path $tempExtract '*') -Destination $localModulePath -Recurse -Force
@@ -88,11 +85,6 @@ function Initialize-RequiredModules {
                 continue
             }
 
-            if (-not $required) {
-                & $Log "AVERTISSEMENT: Module optionnel '$name' introuvable. Certaines fonctions Excel sans Office seront desactivees."
-                continue
-            }
-
             throw ("Module '$name' introuvable. En mode Offline, placez le module dans " +
                    "le dossier Dependencies/ avec : .\Save-Dependencies.ps1")
         }
@@ -104,10 +96,6 @@ function Initialize-RequiredModules {
                 & $Log "Module $name installe."
             }
             catch {
-                if (-not $required) {
-                    & $Log "AVERTISSEMENT: Impossible d'installer le module optionnel '$name': $_"
-                    continue
-                }
                 throw "Impossible d'installer le module '$name': $_"
             }
         }
@@ -116,10 +104,6 @@ function Initialize-RequiredModules {
         }
 
         if (-not (Get-Module -ListAvailable -Name $name)) {
-            if (-not $required) {
-                & $Log "AVERTISSEMENT: Module optionnel '$name' introuvable. Certaines fonctions Excel sans Office seront desactivees."
-                continue
-            }
             throw "Module '$name' introuvable apres installation."
         }
 
@@ -128,10 +112,6 @@ function Initialize-RequiredModules {
             & $Log "Module $name importe."
         }
         catch {
-            if (-not $required) {
-                & $Log "AVERTISSEMENT: Impossible d'importer le module optionnel '$name': $_"
-                continue
-            }
             throw "Impossible d'importer le module '$name': $_"
         }
     }

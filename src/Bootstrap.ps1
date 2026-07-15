@@ -6,8 +6,8 @@
 
 #Requires -Version 5.1
 
-# Version centrale — modifier ici uniquement
-$script:AppVersion = '4.9.7'
+# Version centrale — source unique dans src/Version.ps1
+. (Join-Path $PSScriptRoot 'Version.ps1')
 
 # Applique TLS 1.2 des le debut du processus — requis par PowerShell Gallery.
 # PowerShell 5.1 utilise TLS 1.0 par defaut, ce qui bloque Install-Module / Save-Module.
@@ -31,13 +31,29 @@ Add-Type -Name ConsoleHider -Namespace '' -MemberDefinition @'
 '@ -ErrorAction SilentlyContinue
 try { [ConsoleHider]::ShowWindow([ConsoleHider]::GetConsoleWindow(), 0) | Out-Null } catch {}
 
+# Affiche une erreur fatale de maniere VISIBLE. La console etant masquee (ShowWindow 0),
+# un simple Read-Host resterait invisible et l'app semblerait se figer. On privilegie
+# une MessageBox WPF ; en dernier recours on reaffiche la console.
+function Show-FatalError {
+    param([string]$Message)
+    try {
+        Add-Type -AssemblyName PresentationFramework -ErrorAction Stop
+        [System.Windows.MessageBox]::Show($Message, 'Milestone Toolkit', 'OK', 'Error') | Out-Null
+    }
+    catch {
+        try { [ConsoleHider]::ShowWindow([ConsoleHider]::GetConsoleWindow(), 5) | Out-Null } catch {}
+        Write-Host $Message -ForegroundColor Red
+        Read-Host 'Appuyez sur Entree pour quitter'
+    }
+}
+
 if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
-    Write-Error "Milestone Toolkit requires Windows."
-    Read-Host "Press Enter to quit"
+    Show-FatalError "Milestone Toolkit requires Windows."
     exit 1
 }
 
 try {
+    . (Join-Path $AppRoot 'src/Core/RequiredModules.ps1')
     . (Join-Path $AppRoot 'src/Core/Show-LanguagePicker.ps1')
     . (Join-Path $AppRoot 'src/Core/Show-StartupCheck.ps1')
 
@@ -70,8 +86,7 @@ try {
     $shouldContinue = Show-StartupCheck -AppRoot $AppRoot
 }
 catch {
-    Write-Error "Startup error: $_"
-    Read-Host "Press Enter to quit"
+    Show-FatalError "Startup error: $_"
     exit 1
 }
 
@@ -81,8 +96,6 @@ try {
     & (Join-Path $AppRoot 'src/App.ps1') -RootPath $AppRoot -Lang $script:Lang
 }
 catch {
-    Write-Error "Fatal error: $_"
-    Write-Error $_.ScriptStackTrace
-    Read-Host "Press Enter to quit"
+    Show-FatalError "Fatal error: $_`n`n$($_.ScriptStackTrace)"
     exit 1
 }

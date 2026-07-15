@@ -59,6 +59,9 @@ $script:T = @{
     SC_AppUpdateTitle     = 'Mise a jour disponible'
     SC_AppUpdating        = 'Telechargement de la mise a jour...'
     SC_AppUpdateErr       = 'Erreur lors de la mise a jour : {0}'
+    SC_AppVerRepoMismatch = 'Mise a jour bloquee (depot non fiable)'
+    SC_AppUpdateUntrusted = "Source de mise a jour non fiable, telechargement refuse :`n{0}"
+    SC_AppUpdateBadHash   = "Empreinte SHA256 invalide.`nAttendu : {0}`nObtenu  : {1}"
 
     # MAIN WINDOW
     MW_StatusConnected   = 'Connecte'
@@ -104,6 +107,8 @@ $script:T = @{
     App_ActionDone      = 'Action terminee avec succes.'
     App_ActionCancelled = 'Operation annulee.'
     App_Closing         = "Fermeture de l'application"
+    App_ConnectFailedTitle = 'Connexion echouee'
+    App_ConnectFailed   = "Impossible de se connecter au serveur Milestone.`n`n{0}"
 
     # ACTION NAMES
     Act_SnapshotSel  = 'Snapshot - Selection'

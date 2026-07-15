@@ -19,10 +19,14 @@ function Show-StartupCheck {
     $script:_SC_DepsPath    = Join-Path $AppRoot 'Dependencies'
     $script:_SC_IsOffline   = Test-Path $script:_SC_DepsPath
     $script:_SC_DepRows     = @{}
-    $script:_SC_Modules     = @(
-        @{ Name = 'MilestonePSTools'; Required = $true; Description = $script:T.SC_ModuleDesc }
-        @{ Name = 'ImportExcel';    Required = $true; Description = $script:T.SC_ModuleExcelDesc }
-    )
+    $script:_SC_Modules     = Get-RequiredModules | ForEach-Object {
+        @{ Name = $_.Name; Required = $_.Required; Description = $script:T[$_.DescriptionKey] }
+    }
+
+    # SECURITE : depot de mise a jour CODE EN DUR. Toute valeur differente dans
+    # config.json est rejetee (un fichier local modifie ne doit jamais rediriger
+    # les mises a jour vers un depot tiers => execution de code arbitraire).
+    $script:_SC_TrustedRepo = 'Nothinx-44/XProtect-Export-Tool-to-Excel-MilestonePSTools-GUI-'
 
     $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -446,8 +450,20 @@ function Show-StartupCheck {
         if (Test-Path $cfgPath) {
             try { $cfg = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
         }
-        if (-not $cfg -or -not $cfg.autoUpdate -or -not $cfg.autoUpdate.repo) {
-            $script:_SC_AppStatus.Text = $script:T.SC_AppVerNetErr
+        # Mise a jour desactivee explicitement dans config.json
+        if ($cfg -and $cfg.autoUpdate -and $cfg.autoUpdate.enabled -eq $false) {
+            $script:_SC_AppStatus.Text = $script:T.SC_AppVerUpToDate
+            & $script:_SC_Refresh
+            return
+        }
+
+        # SECURITE : on ignore la valeur repo de config.json si elle differe du depot
+        # de confiance. Un config.json altere ne doit pas rediriger les mises a jour.
+        $configuredRepo = if ($cfg -and $cfg.autoUpdate) { $cfg.autoUpdate.repo } else { $null }
+        if ($configuredRepo -and $configuredRepo -ne $script:_SC_TrustedRepo) {
+            $script:_SC_AppStatus.Text    = $script:T.SC_AppVerRepoMismatch
+            $script:_SC_AppIndicator.Fill = [System.Windows.Media.SolidColorBrush]::new(
+                [System.Windows.Media.Color]::FromRgb(243,139,168))
             & $script:_SC_Refresh
             return
         }
@@ -457,7 +473,7 @@ function Show-StartupCheck {
                 [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
             $headers = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
             $release = Invoke-RestMethod `
-                -Uri "https://api.github.com/repos/$($cfg.autoUpdate.repo)/releases/latest" `
+                -Uri "https://api.github.com/repos/$($script:_SC_TrustedRepo)/releases/latest" `
                 -Headers $headers -TimeoutSec 10 -ErrorAction Stop
         }
         catch {
@@ -860,14 +876,38 @@ function Show-StartupCheck {
         & $script:_SC_Refresh
 
         try {
+            # SECURITE : l'archive doit provenir de GitHub, en HTTPS, pour le depot de
+            # confiance. On refuse toute autre origine avant meme de telecharger.
+            $zipUrl = $release.zipball_url
+            $uri    = [Uri]$zipUrl
+            if ($uri.Scheme -ne 'https' -or
+                $uri.Host -notmatch '(^|\.)github\.com$' -or
+                $uri.AbsolutePath -notmatch "/repos/$([regex]::Escape($script:_SC_TrustedRepo))/") {
+                throw ($script:T.SC_AppUpdateUntrusted -f $zipUrl)
+            }
+
+            # SHA256 optionnel : si les notes de release contiennent une ligne
+            # "sha256: <hash>", on verifie l'archive telechargee.
+            $expectedHash = $null
+            if ($release.body -match '(?im)^\s*sha256\s*[:=]\s*([0-9a-fA-F]{64})\s*$') {
+                $expectedHash = $Matches[1]
+            }
+
             $tempDir = Join-Path $env:TEMP ("MilestoneToolkitUpdate_{0}" -f [guid]::NewGuid())
             $zipPath = Join-Path $tempDir 'release.zip'
             $extract = Join-Path $tempDir 'extract'
             New-Item -Path $tempDir,$extract -ItemType Directory -Force | Out-Null
 
             $dlHeaders = @{ 'User-Agent' = 'MilestoneToolkitUpdater' }
-            Invoke-WebRequest -Uri $release.zipball_url -OutFile $zipPath `
+            Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath `
                 -Headers $dlHeaders -UseBasicParsing -ErrorAction Stop
+
+            if ($expectedHash) {
+                $actualHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash
+                if ($actualHash -ne $expectedHash) {
+                    throw ($script:T.SC_AppUpdateBadHash -f $expectedHash, $actualHash)
+                }
+            }
 
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $extract)

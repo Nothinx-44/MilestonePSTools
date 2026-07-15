@@ -59,6 +59,9 @@ $script:T = @{
     SC_AppUpdateTitle     = 'Update available'
     SC_AppUpdating        = 'Downloading update...'
     SC_AppUpdateErr       = 'Update error: {0}'
+    SC_AppVerRepoMismatch = 'Update blocked (untrusted repository)'
+    SC_AppUpdateUntrusted = "Untrusted update source, download refused:`n{0}"
+    SC_AppUpdateBadHash   = "Invalid SHA256 checksum.`nExpected: {0}`nActual  : {1}"
 
     # MAIN WINDOW
     MW_StatusConnected   = 'Connected'
@@ -104,6 +107,8 @@ $script:T = @{
     App_ActionDone      = 'Action completed successfully.'
     App_ActionCancelled = 'Operation cancelled.'
     App_Closing         = 'Application closing'
+    App_ConnectFailedTitle = 'Connection failed'
+    App_ConnectFailed   = "Unable to connect to the Milestone server.`n`n{0}"
 
     # ACTION NAMES
     Act_SnapshotSel  = 'Snapshot - Selection'

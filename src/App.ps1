@@ -12,7 +12,9 @@ param(
 
 $script:AppRoot    = $RootPath
 $script:SrcPath    = Join-Path $AppRoot 'src'
-$script:AppVersion = '4.9.7'  # Synchronise avec Bootstrap.ps1
+
+# Version : source unique dans src/Version.ps1 (charge AVANT la langue qui l'utilise)
+. (Join-Path $script:SrcPath 'Version.ps1')
 
 # Chargement de la langue
 . (Join-Path $script:SrcPath "Lang/$Lang.ps1")
@@ -49,6 +51,7 @@ $script:Config = @{
 # CHARGEMENT DES SCRIPTS
 # ============================================================
 
+. (Join-Path $SrcPath 'Core/RequiredModules.ps1')
 . (Join-Path $SrcPath 'Core/Initialize-Modules.ps1')
 . (Join-Path $SrcPath 'Core/Write-ActivityLog.ps1')
 . (Join-Path $SrcPath 'Core/Invoke-PtzPreset.ps1')
@@ -79,8 +82,18 @@ $initLog = { param($Message) Write-Host $Message }
 Initialize-RequiredModules -InstallMode $installMode -DependenciesPath $DependenciesPath -Log $initLog
 
 Write-Host 'Connecting to Milestone server...' -ForegroundColor Cyan
-Connect-ManagementServer -ShowDialog -AcceptEula -Force
-Write-Host 'Connected.' -ForegroundColor Green
+try {
+    Connect-ManagementServer -ShowDialog -AcceptEula -Force
+    Write-Host 'Connected.' -ForegroundColor Green
+}
+catch {
+    # La console est masquee : sans MessageBox, l'echec de connexion serait invisible.
+    Add-Type -AssemblyName PresentationFramework -ErrorAction SilentlyContinue
+    [System.Windows.MessageBox]::Show(
+        ($script:T.App_ConnectFailed -f $_.Exception.Message),
+        $script:T.App_ConnectFailedTitle, 'OK', 'Error') | Out-Null
+    exit 1
+}
 
 # ============================================================
 # MASQUER LA CONSOLE
@@ -185,6 +198,15 @@ $script:SnapshotDate.SelectedDate = [datetime]::Today.AddDays(-1)
 
 $script:CancelRequested = $false
 $script:IsCancelled = { $script:CancelRequested }
+$script:LastUIPump  = 0
+
+# Force le traitement de la file du dispatcher (rendu + entrees souris).
+# Permet au bouton Annuler de s'afficher et de reagir pendant une action.
+function Update-UI {
+    [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+        [System.Windows.Threading.DispatcherPriority]::Input, [Action]{}
+    )
+}
 
 # Retourne @{ Ok=$true; Time=[datetime] ou $null } — type uniforme, plus de $false sentinel
 function Get-SnapshotDateTime {
@@ -255,9 +277,15 @@ function Write-UILog {
     }
     $script:LogOutput.ScrollToEnd()
 
-    [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
-        [System.Windows.Threading.DispatcherPriority]::Render, [Action]{}
-    )
+    # Pump du dispatcher limite (~50 ms) : rafraichit l'UI sans payer un rendu
+    # synchrone a chaque ligne, ce qui ralentissait les actions verbeuses.
+    $now = [Environment]::TickCount
+    if (($now - $script:LastUIPump) -ge 50) {
+        $script:LastUIPump = $now
+        [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+            [System.Windows.Threading.DispatcherPriority]::Render, [Action]{}
+        )
+    }
 
     $fileLevel = if ($Level -in 'ACTION','INFO') { 'INFO' } else { $Level }
     Write-ActivityLog -Message $Message -Level $fileLevel -LogDirectory $script:Config.logDirectory
@@ -296,6 +324,10 @@ function Invoke-Action {
     $script:CancelRequested = $false
     Set-UIBusy -ActionName $Name
     Write-UILog "--- $Name ---" 'ACTION'
+    # Garantit que l'etat occupe (bouton Annuler visible) est rendu et hit-testable
+    # AVANT de demarrer le travail. La reactivite pendant l'action depend ensuite des
+    # appels a ReportProgress/log qui pompent la file du dispatcher.
+    Update-UI
 
     try {
         & $Action
