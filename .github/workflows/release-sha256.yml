@@ -1,13 +1,19 @@
 name: Injecter le SHA256 dans les notes de release
 
-# A chaque release publiee (ou editee), calcule le SHA256 de l'archive source
-# et l'ajoute automatiquement dans les notes sous forme "sha256: <hash>".
+# A chaque release publiee, calcule le SHA256 de l'archive source et l'ajoute
+# automatiquement dans les notes sous forme "sha256: <hash>".
 # L'application verifie ce hash au telechargement de la mise a jour.
 # 100% automatique : aucune action manuelle requise.
+# Le declenchement manuel (workflow_dispatch) permet de (re)traiter un tag existant.
 
 on:
   release:
     types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la release a traiter (ex: 4.9.8)"
+        required: true
 
 permissions:
   contents: write
@@ -19,10 +25,11 @@ jobs:
       - name: Calculer et injecter le SHA256
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          echo "Traitement du tag: $TAG"
 
           # Recupere les notes actuelles
           BODY=$(gh release view "$TAG" --repo "$REPO" --json body -q .body)
