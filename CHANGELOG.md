@@ -1,5 +1,26 @@
 # Release Notes
 
+## v4.9.8
+> Audit securite et robustesse — mises a jour verifiees, erreurs visibles, refactor
+
+### Securite
+- **Show-StartupCheck.ps1** : le depot de mise a jour est desormais **code en dur**. Toute valeur `autoUpdate.repo` differente dans `config.json` est rejetee — un fichier local altere ne peut plus rediriger les mises a jour vers un depot tiers (execution de code arbitraire).
+- **Show-StartupCheck.ps1** : avant tout telechargement, l'URL de l'archive est validee (HTTPS, hote `github.com`, chemin du depot de confiance). Verification **SHA256** optionnelle si une ligne `sha256: <hash>` figure dans les notes de release.
+
+### Corrections
+- **Updater.ps1** : **sauvegarde du code avant ecrasement + restauration automatique** si la copie de la mise a jour echoue (plus de risque d'installation cassee).
+- **Bootstrap.ps1 / App.ps1** : les erreurs fatales et l'echec de connexion au serveur s'affichent en `MessageBox`. La console etant masquee, un `Read-Host` restait invisible et l'app semblait se figer.
+- **Initialize-Modules.ps1** : `Join-Path` a 3 arguments (casse en PS 5.1) corrige dans le chemin d'extraction nupkg a sous-dossier unique.
+
+### Ameliorations
+- **App.ps1** : le bouton Annuler est desormais rendu et cliquable avant le lancement du travail. Pump du journal UI limite a ~50 ms au lieu d'un rendu synchrone par ligne (actions verbeuses plus fluides).
+- **src/Version.ps1** (nouveau) : version centralisee, dot-sourcee par Bootstrap et App — fin de la duplication du numero.
+- **src/Core/RequiredModules.ps1** (nouveau) : liste des modules requis centralisee (`Get-RequiredModules`), utilisee par Initialize-Modules, Show-StartupCheck et Save-Dependencies.
+- **Initialize-Modules.ps1** : suppression des branches "module optionnel" mortes (tous les modules sont requis).
+- Retrait d'un fichier de log commite par erreur (fuite de chemin local).
+
+---
+
 ## v4.9.7
 > Troisieme audit qualite — annulation, erreurs cachees et traductions manquantes
 
