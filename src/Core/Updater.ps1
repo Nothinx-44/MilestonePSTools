@@ -46,6 +46,9 @@ catch {
 
 try {
     Copy-Item -Path (Join-Path $Source '*') -Destination $Target -Recurse -Force -ErrorAction Stop
+    # Les nouveaux fichiers peuvent porter le "Mark of the Web" : on supprime le temoin
+    # pour que le .bat les debloque au prochain lancement.
+    Remove-Item (Join-Path $Target '.unblocked') -Force -ErrorAction SilentlyContinue
     # Succes : la sauvegarde n'est plus necessaire.
     if ($backupOk) { Remove-Item $backupDir -Recurse -Force -ErrorAction SilentlyContinue }
 }

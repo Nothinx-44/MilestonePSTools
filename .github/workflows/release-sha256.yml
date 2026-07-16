@@ -22,6 +22,22 @@ jobs:
   sha256:
     runs-on: ubuntu-latest
     steps:
+      - name: Verifier que src/Version.ps1 correspond au tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RAW=$(gh api "repos/$REPO/contents/src/Version.ps1?ref=$TAG" -q .content | base64 -d)
+          VER=$(printf '%s' "$RAW" | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" | head -n1)
+          CLEAN_TAG="${TAG#v}"
+          echo "Version.ps1 = $VER | tag = $CLEAN_TAG"
+          if [ "$VER" != "$CLEAN_TAG" ]; then
+            echo "::error::src/Version.ps1 ($VER) ne correspond pas au tag ($CLEAN_TAG). L'auto-updater comparerait des versions incoherentes."
+            exit 1
+          fi
+
       - name: Calculer et injecter le SHA256
         env:
           GH_TOKEN: ${{ github.token }}

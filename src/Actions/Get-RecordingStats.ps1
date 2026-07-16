@@ -16,6 +16,22 @@ function Get-RecordingStats {
     $total   = $cameras.Count
     & $Log ($script:T.RS_LogFound -f $total)
 
+    # Statistiques video : UN SEUL appel groupe (parallelise par serveur d'enregistrement)
+    # au lieu d'un appel reseau par camera. NOTE : l'ancien code "$cam | Get-VideoDeviceStatistics"
+    # liait l'Id de la camera au parametre RecordingServerId => aucun resultat, colonnes
+    # FPS/Bitrate/Resolution toujours 'N/A'. Le lookup par DeviceId corrige ce bug.
+    $vidStatsLookup = [System.Collections.Generic.Dictionary[string, object]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase)
+    try {
+        foreach ($rsResult in @(Get-VideoDeviceStatistics -ErrorAction Stop)) {
+            foreach ($dev in @($rsResult.VideoDeviceStatistics)) {
+                if ($dev -and $dev.DeviceId) { $vidStatsLookup[$dev.DeviceId.ToString()] = $dev }
+            }
+        }
+        & $Log ($script:T.RS_LogLiveOk -f $vidStatsLookup.Count)
+    }
+    catch { & $Log ($script:T.RS_LogLiveWarn -f $_) }
+
     $rows  = [System.Collections.Generic.List[PSCustomObject]]::new()
     $count = 0
 
@@ -76,19 +92,23 @@ function Get-RecordingStats {
         }
         catch { & $Log ($script:T.RS_LogMotWarn -f $_) }
 
-        try {
-            $vidStats = $cam | Get-VideoDeviceStatistics -ErrorAction Stop
-            if ($vidStats) {
-                $fps = if ($null -ne $vidStats.FPS)             { [math]::Round($vidStats.FPS, 1)        } else { 'N/A' }
-                $bps = if ($null -ne $vidStats.BPS)             { [math]::Round($vidStats.BPS / 1000, 0) } else { 'N/A' }
-                $res = if ($null -ne $vidStats.ImageResolution) { $vidStats.ImageResolution              } else { 'N/A' }
+        $dev = $null
+        if ($vidStatsLookup.TryGetValue([string]$cam.Id, [ref]$dev) -and $dev) {
+            # Flux d'enregistrement en priorite, sinon flux live par defaut, sinon le premier
+            $streams = @($dev.VideoStreamStatisticsArray)
+            $vs = $streams | Where-Object { $_.RecordingStream }    | Select-Object -First 1
+            if (-not $vs) { $vs = $streams | Where-Object { $_.LiveStreamDefault } | Select-Object -First 1 }
+            if (-not $vs) { $vs = $streams | Select-Object -First 1 }
+            if ($vs) {
+                $fps = [math]::Round($vs.FPS, 1)
+                $bps = [math]::Round($vs.BPS / 1000, 0)
+                $res = if ($vs.ImageResolution) { "$($vs.ImageResolution.Width)x$($vs.ImageResolution.Height)" } else { 'N/A' }
                 $row.($script:T.RS_CsvFps)     = $fps
                 $row.($script:T.RS_CsvBitrate) = $bps
                 $row.($script:T.RS_CsvRes)     = $res
                 & $Log ($script:T.RS_LogLive -f $fps, $bps, $res)
             }
         }
-        catch { & $Log ($script:T.RS_LogLiveWarn -f $_) }
 
         $rows.Add($row)
     }

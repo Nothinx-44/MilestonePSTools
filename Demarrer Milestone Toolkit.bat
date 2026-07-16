@@ -16,9 +16,15 @@ if exist "%~dp0Dependencies\" (
 )
 
 :: Deblocage de TOUS les fichiers du projet (telechargement ZIP depuis GitHub)
-:: Sans ca, Windows bloque les scripts et les modules PowerShell
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Get-ChildItem -Path '%~dp0' -Recurse -File | Unblock-File -ErrorAction SilentlyContinue"
+:: Sans ca, Windows bloque les scripts et les modules PowerShell.
+:: Fait UNE SEULE FOIS (fichier temoin .unblocked) : sinon on re-parcourt tout
+:: Dependencies\ (le SDK MilestonePSTools, des milliers de fichiers) a chaque lancement.
+:: L'updater supprime le temoin apres une mise a jour pour re-debloquer les nouveaux fichiers.
+if not exist "%~dp0.unblocked" (
+    echo Deblocage initial des fichiers...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "Get-ChildItem -Path '%~dp0' -Recurse -File | Unblock-File -ErrorAction SilentlyContinue; Set-Content -Path (Join-Path '%~dp0' '.unblocked') -Value '' -ErrorAction SilentlyContinue"
+)
 
 :: Lancement
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0src\Bootstrap.ps1"

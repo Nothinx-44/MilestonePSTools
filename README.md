@@ -34,7 +34,7 @@ Cliquer sur Demarrer Milestone Toolkit.bat
 | Action | Description |
 |--------|-------------|
 | **Snapshot - Selection** | Capture un snapshot de la camera selectionnee via le dialogue Milestone |
-| **Snapshot - Toutes les cameras** | Capture un snapshot de toutes les cameras en parallele (jusqu'a 12 simultanees) |
+| **Snapshot - Toutes les cameras** | Capture un snapshot de chaque camera du systeme, avec progression et annulation |
 | **Snapshot - Presets PTZ** | Parcourt les presets PTZ et capture un snapshot a chaque position |
 
 Toutes les actions snapshot supportent deux modes :
@@ -80,10 +80,15 @@ Toutes les actions snapshot supportent deux modes :
 
 - Windows 10/11 ou Windows Server 2016+
 - PowerShell 5.1 (inclus dans Windows)
-- Excel installe sur le poste (pour l'export Hardware avec snapshots)
+- Excel **facultatif** : s'il est absent, l'export Hardware utilise automatiquement le module ImportExcel (aucune installation d'Office requise)
 - Acces reseau au serveur Milestone XProtect Management Server
 
-Le module **MilestonePSTools** est installe automatiquement au premier lancement si Internet est disponible.
+Les modules **MilestonePSTools** et **ImportExcel** sont installes automatiquement au premier lancement si Internet est disponible.
+
+## Langues et mises a jour
+
+- **Langues** : francais et anglais. Le choix est demande au premier lancement puis memorise dans `config.json` (cle `language`).
+- **Mise a jour automatique** : au demarrage, l'outil verifie la derniere release GitHub et propose la mise a jour en un clic. L'archive est verifiee (source GitHub officielle + empreinte SHA256 presente dans les notes de release) et l'ancienne version est sauvegardee avec restauration automatique en cas d'echec.
 
 ---
 
@@ -109,7 +114,12 @@ Modifier `config.json` :
     "outputDirectory": "./Output",
     "snapshotQuality": 95,
     "csvDelimiter": ";",
-    "csvEncoding": "UTF8"
+    "csvEncoding": "UTF8",
+    "language": "fr",
+    "autoUpdate": {
+        "enabled": true,
+        "repo": "Nothinx-44/XProtect-Export-Tool-to-Excel-MilestonePSTools-GUI-"
+    }
 }
 ```
 
@@ -119,6 +129,9 @@ Modifier `config.json` :
 | `snapshotQuality` | Qualite JPEG des snapshots (1-100) | `95` |
 | `csvDelimiter` | Separateur des fichiers CSV | `;` |
 | `csvEncoding` | Encodage des fichiers CSV | `UTF8` |
+| `language` | Langue de l'interface (`fr` ou `en`), memorisee au premier lancement | — |
+| `autoUpdate.enabled` | Verification de mise a jour au demarrage | `true` |
+| `autoUpdate.repo` | Informatif : le depot de mise a jour est fige dans le code par securite | — |
 
 Le dossier de sortie peut aussi etre change en cours d'utilisation via le bouton **Changer** dans la sidebar.
 
@@ -129,16 +142,22 @@ Le mode Online/Offline est detecte automatiquement selon la presence du dossier 
 ## Structure du projet
 
 ```
-MilestonePSTools/
-├── Launch.ps1                  # Point d'entree
-├── config.json                 # Configuration
-├── Dependencies/               # Modules offline (optionnel)
-├── Logs/                       # Logs journaliers (auto)
-├── Output/                     # Fichiers generes (auto)
+Milestone Toolkit/
+├── Demarrer Milestone Toolkit.bat   # Point d'entree (double-clic)
+├── config.json                      # Configuration
+├── Save-Dependencies.ps1            # Preparation du mode offline
+├── Dependencies/                    # Modules offline (optionnel)
+├── Logs/                            # Logs journaliers (auto, purge > 30 jours)
+├── Output/                          # Fichiers generes (auto)
 └── src/
-    ├── App.ps1                 # Chargement UI et evenements
+    ├── Bootstrap.ps1                # Demarrage : langue, verification, mise a jour
+    ├── App.ps1                      # Chargement UI et evenements
+    ├── Version.ps1                  # Numero de version (source unique)
     ├── UI/
-    │   └── MainWindow.xaml     # Interface WPF (theme sombre Catppuccin)
+    │   └── MainWindow.xaml          # Interface WPF (theme sombre Catppuccin)
+    ├── Lang/
+    │   ├── fr.ps1                   # Traductions francaises
+    │   └── en.ps1                   # Traductions anglaises
     ├── Actions/
     │   ├── Get-SnapshotSelected.ps1
     │   ├── Get-SnapshotAll.ps1
@@ -150,8 +169,12 @@ MilestonePSTools/
     │   ├── Get-CameraStatus.ps1
     │   └── Get-PlaybackReport.ps1
     └── Core/
+        ├── RequiredModules.ps1      # Liste des modules requis (source unique)
         ├── Initialize-Modules.ps1
+        ├── Show-LanguagePicker.ps1
         ├── Show-StartupCheck.ps1
+        ├── Updater.ps1              # Application des mises a jour (backup + rollback)
+        ├── ConsoleWindow.ps1
         ├── Write-ActivityLog.ps1
         └── Invoke-PtzPreset.ps1
 ```

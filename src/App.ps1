@@ -51,6 +51,7 @@ $script:Config = @{
 # CHARGEMENT DES SCRIPTS
 # ============================================================
 
+. (Join-Path $SrcPath 'Core/ConsoleWindow.ps1')
 . (Join-Path $SrcPath 'Core/RequiredModules.ps1')
 . (Join-Path $SrcPath 'Core/Initialize-Modules.ps1')
 . (Join-Path $SrcPath 'Core/Write-ActivityLog.ps1')
@@ -65,6 +66,9 @@ $script:Config = @{
 . (Join-Path $SrcPath 'Actions/Get-LicenseInfo.ps1')
 . (Join-Path $SrcPath 'Actions/Get-CameraStatus.ps1')
 . (Join-Path $SrcPath 'Actions/Get-PlaybackReport.ps1')
+
+# Purge des anciens logs (> 30 jours) — une fois au demarrage
+Remove-OldLogs -LogDirectory $script:Config.logDirectory -RetentionDays 30
 
 # ============================================================
 # INITIALISATION MODULES ET CONNEXION
@@ -99,13 +103,7 @@ catch {
 # MASQUER LA CONSOLE
 # ============================================================
 
-Add-Type -Name ConsoleHelper -Namespace '' -MemberDefinition @'
-    [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
-    [DllImport("user32.dll")]   public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-'@ -ErrorAction SilentlyContinue
-
-$consoleHandle = [ConsoleHelper]::GetConsoleWindow()
-[ConsoleHelper]::ShowWindow($consoleHandle, 0) | Out-Null
+Hide-Console
 
 # ============================================================
 # CHARGEMENT WPF
@@ -464,7 +462,7 @@ $BtnOutputDir.Add_Click({
 $Window.Add_Closing({
     Write-ActivityLog -Message $script:T.App_Closing -Level 'INFO' -LogDirectory $script:Config.logDirectory
     try { Disconnect-ManagementServer } catch {}
-    [ConsoleHelper]::ShowWindow($consoleHandle, 5) | Out-Null
+    Show-Console
 })
 
 # ============================================================

@@ -25,13 +25,11 @@ $AppRoot = if ($PSScriptRoot) {
 }
 
 
-Add-Type -Name ConsoleHider -Namespace '' -MemberDefinition @'
-    [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow();
-    [DllImport("user32.dll")]   public static extern bool ShowWindow(IntPtr h, int n);
-'@ -ErrorAction SilentlyContinue
-try { [ConsoleHider]::ShowWindow([ConsoleHider]::GetConsoleWindow(), 0) | Out-Null } catch {}
+# Masquage console via helper partage (Hide-Console / Show-Console)
+. (Join-Path $PSScriptRoot 'Core/ConsoleWindow.ps1')
+Hide-Console
 
-# Affiche une erreur fatale de maniere VISIBLE. La console etant masquee (ShowWindow 0),
+# Affiche une erreur fatale de maniere VISIBLE. La console etant masquee,
 # un simple Read-Host resterait invisible et l'app semblerait se figer. On privilegie
 # une MessageBox WPF ; en dernier recours on reaffiche la console.
 function Show-FatalError {
@@ -41,7 +39,7 @@ function Show-FatalError {
         [System.Windows.MessageBox]::Show($Message, 'Milestone Toolkit', 'OK', 'Error') | Out-Null
     }
     catch {
-        try { [ConsoleHider]::ShowWindow([ConsoleHider]::GetConsoleWindow(), 5) | Out-Null } catch {}
+        Show-Console
         Write-Host $Message -ForegroundColor Red
         Read-Host 'Appuyez sur Entree pour quitter'
     }

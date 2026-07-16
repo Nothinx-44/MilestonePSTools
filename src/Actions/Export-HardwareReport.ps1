@@ -296,6 +296,38 @@ function Export-HardwareReport {
         return 'N/A'
     }
 
+    # Valeurs des colonnes d'une camera — SOURCE UNIQUE partagee entre le chemin
+    # ImportExcel et le chemin COM (evite toute divergence entre les deux exports).
+    function Get-CameraRowValues {
+        param($cam, [hashtable]$StreamLookup, [hashtable]$RetentionLookup, [bool]$IncludePassword)
+        $ip = if ($cam.Address -match '([0-9]{1,3}(?:\.[0-9]{1,3}){3})') { $Matches[1] } else { $cam.Address }
+        $si         = $StreamLookup[$cam.Name]
+        $recStream  = if ($si) { $si.Rec  } else { $null }
+        $liveStream = if ($si) { $si.Live } else { $null }
+        $extraCount = if ($si) { $si.Extra } else { 0 }
+        $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
+        $ret        = if ($RetentionLookup.ContainsKey($cam.Name)) { $RetentionLookup[$cam.Name] } else { 'N/A' }
+        @{
+            'Nom'             = $cam.Name
+            'Fabricant'       = $cam.DriverFamily
+            'Modele'          = $cam.Model
+            'IP'              = $ip
+            'MAC'             = $cam.MAC
+            'Firmware'        = $cam.Firmware
+            'ServeurRec'      = $cam.RecorderName
+            'Utilisateur'     = $cam.Username
+            'MotDePasse'      = if ($IncludePassword) { $cam.Password } else { '' }
+            'CodecEnreg'      = Get-StreamSetting $recStream 'Codec'
+            'ResolutionEnreg' = Get-StreamSetting $recStream 'Resolution'
+            'FPSEnreg'        = Get-StreamSetting $recStream 'FPS'
+            'CodecLive'       = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' }
+            'ResolutionLive'  = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' }
+            'FPSLive'         = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' }
+            'FluxSupp'        = if ($extraCount -gt 0) { $script:T.XL_ExtraFlux -f $extraCount } else { '' }
+            'Retention'       = $ret
+        }
+    }
+
     $exportConfig = Show-ExportColumnSelector
     if ($null -eq $exportConfig) {
         & $Log $script:T.EH_Cancelled
@@ -527,6 +559,14 @@ function Export-HardwareReport {
             catch {}
         }
 
+        # Mode Offline (dossier Dependencies/ present) : ne jamais telecharger
+        # depuis Internet en pleine action — le module doit venir du cache local.
+        if ($script:DependenciesPath -and (Test-Path $script:DependenciesPath)) {
+            return $false
+        }
+
+        # Annonce le telechargement au lieu d'installer silencieusement
+        & $Log $script:T.EH_LogInstallExcel
         try {
             Install-Module -Name ImportExcel -Force -Scope CurrentUser -ErrorAction Stop
             Import-Module ImportExcel -Force -ErrorAction Stop
@@ -570,34 +610,11 @@ function Export-HardwareReport {
         # Calculer les valeurs de chaque camera (stream/retention deja en memoire)
         $camValues = [System.Collections.Generic.List[pscustomobject]]::new()
         foreach ($cam in $camReport) {
-            $epRow = [ordered]@{}
-            $ip = if ($cam.Address -match '([0-9]{1,3}(?:\.[0-9]{1,3}){3})') { $Matches[1] } else { $cam.Address }
-            $si         = $streamLookup[$cam.Name]
-            $recStream  = if ($si) { $si.Rec  } else { $null }
-            $liveStream = if ($si) { $si.Live } else { $null }
-            $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
-            $ret        = if ($retentionLookup.ContainsKey($cam.Name)) { $retentionLookup[$cam.Name] } else { 'N/A' }
+            $epRow  = [ordered]@{}
+            $values = Get-CameraRowValues $cam $streamLookup $retentionLookup $includePassword
             foreach ($col in $activeColumns) {
-                $epRow[$col.Name] = switch ($col.Name) {
-                    'Nom'             { $cam.Name }
-                    'Fabricant'       { $cam.DriverFamily }
-                    'Modele'          { $cam.Model }
-                    'IP'              { $ip }
-                    'MAC'             { $cam.MAC }
-                    'Firmware'        { $cam.Firmware }
-                    'ServeurRec'      { $cam.RecorderName }
-                    'Utilisateur'     { $cam.Username }
-                    'MotDePasse'      { if ($includePassword) { $cam.Password } else { '' } }
-                    'CodecEnreg'      { Get-StreamSetting $recStream 'Codec' }
-                    'ResolutionEnreg' { Get-StreamSetting $recStream 'Resolution' }
-                    'FPSEnreg'        { Get-StreamSetting $recStream 'FPS' }
-                    'CodecLive'       { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' } }
-                    'ResolutionLive'  { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' } }
-                    'FPSLive'         { if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' } }
-                    'FluxSupp'        { if ($si -and $si.Extra -gt 0) { $script:T.XL_ExtraFlux -f $si.Extra } else { '' } }
-                    'Retention'       { $ret }
-                    default           { '' }
-                }
+                $v = $values[$col.Name]
+                $epRow[$col.Name] = if ($null -ne $v) { $v } else { '' }
             }
             $epRow['__Snap']   = if ($snapColIndex   -gt 0 -and $snapPaths.ContainsKey($cam.Name))   { $snapPaths[$cam.Name]   } else { '' }
             $epRow['__SnapJ7'] = if ($snapJ7ColIndex -gt 0 -and $snapJ7Paths.ContainsKey($cam.Name)) { $snapJ7Paths[$cam.Name] } else { '' }
@@ -835,35 +852,7 @@ try {
             & $ReportProgress $count $total
             & $Log ($script:T.EH_LogCamRow -f $count, $total, $cam.Name)
 
-            $ip = if ($cam.Address -match '(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})') { $Matches[1] } else { $cam.Address }
-
-            $si         = $streamLookup[$cam.Name]
-            $recStream  = if ($si) { $si.Rec  } else { $null }
-            $liveStream = if ($si) { $si.Live } else { $null }
-            $extraCount = if ($si) { $si.Extra } else { 0 }
-            $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
-
-            $ret = if ($retentionLookup.ContainsKey($cam.Name)) { $retentionLookup[$cam.Name] } else { 'N/A' }
-
-            $values = @{
-                'Nom'             = $cam.Name
-                'Fabricant'       = $cam.DriverFamily
-                'Modele'          = $cam.Model
-                'IP'              = $ip
-                'MAC'             = $cam.MAC
-                'Firmware'        = $cam.Firmware
-                'ServeurRec'      = $cam.RecorderName
-                'Utilisateur'     = $cam.Username
-                'MotDePasse'      = if ($includePassword) { $cam.Password } else { '' }
-                'CodecEnreg'      = Get-StreamSetting $recStream 'Codec'
-                'ResolutionEnreg' = Get-StreamSetting $recStream 'Resolution'
-                'FPSEnreg'        = Get-StreamSetting $recStream 'FPS'
-                'CodecLive'       = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Codec' }
-                'ResolutionLive'  = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'Resolution' }
-                'FPSLive'         = if ($sameStream) { '' } else { Get-StreamSetting $liveStream 'FPS' }
-                'FluxSupp'        = if ($extraCount -gt 0) { $script:T.XL_ExtraFlux -f $extraCount } else { '' }
-                'Retention'       = $ret
-            }
+            $values = Get-CameraRowValues $cam $streamLookup $retentionLookup $includePassword
 
             for ($c = 0; $c -lt $activeColumns.Count; $c++) {
                 $colName = $activeColumns[$c].Name
@@ -915,7 +904,17 @@ try {
     finally {
         try { $workbook.Close($false) } catch {}
         try { $excel.Quit() }           catch {}
-        try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null } catch {}
+        # Liberer TOUS les objets COM references (sheet + workbook + excel), puis
+        # forcer le GC : sinon les RCW restants gardent un Excel.exe zombie en memoire.
+        foreach ($com in @($sheet, $workbook, $excel)) {
+            if ($com) {
+                try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($com) | Out-Null } catch {}
+            }
+        }
+        $sheet = $null ; $workbook = $null ; $excel = $null
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
+        [GC]::Collect()
         if ($tempDirJ7 -and (Test-Path $tempDirJ7)) {
             Remove-Item $tempDirJ7 -Recurse -Force -ErrorAction SilentlyContinue
         }

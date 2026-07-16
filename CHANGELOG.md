@@ -1,5 +1,28 @@
 # Release Notes
 
+## v4.9.9
+> Quatrieme audit — bugs PTZ et stats video, demarrage plus rapide, README a jour
+
+### Corrections
+- **Get-RecordingStats.ps1** : les colonnes FPS/Bitrate/Resolution etaient TOUJOURS 'N/A' — `$cam | Get-VideoDeviceStatistics` liait l'Id de la camera au parametre `RecordingServerId` (aucun resultat). Remplace par un appel groupe unique (parallelise par serveur d'enregistrement) avec lookup par `DeviceId` : le bug est corrige ET l'action est beaucoup plus rapide.
+- **Invoke-PtzPreset.ps1** : les echecs (`Write-Error` non-terminant) etaient invisibles — la console est masquee et le `catch` de l'appelant ne se declenchait jamais. Remplace par `throw` : les erreurs PTZ apparaissent desormais dans le journal.
+- **Invoke-PtzPreset.ps1** : la verification de position comparait `Abs(Abs(a)-Abs(b))` — une camera a pan -0.5 etait jugee arrivee sur un preset a +0.5. Corrige en `Abs(a-b)`.
+- **Export-HardwareReport.ps1** : liberation COM complete (sheet + workbook + excel) suivie d'un GC force — evite les processus Excel.exe zombies apres export.
+- **Export-HardwareReport.ps1** : plus de `Install-Module` silencieux en pleine action — le telechargement d'ImportExcel est annonce dans le journal et refuse en mode Offline.
+
+### Ameliorations
+- **Demarrer Milestone Toolkit.bat** : le deblocage des fichiers (`Unblock-File` recursif sur tout le projet, y compris le SDK) ne s'execute plus qu'une seule fois (fichier temoin `.unblocked`, efface par l'updater apres mise a jour). Demarrage nettement plus rapide.
+- **Write-ActivityLog.ps1** : purge automatique des logs de plus de 30 jours au demarrage (`Remove-OldLogs`).
+- **CI** : le workflow de release refuse desormais la publication si `src/Version.ps1` ne correspond pas au tag (protege l'auto-updater).
+- **Export-HardwareReport.ps1** : le calcul des valeurs de colonnes est factorise (`Get-CameraRowValues`), source unique pour les chemins COM et ImportExcel (2 regex IP divergentes unifiees).
+- **Core/ConsoleWindow.ps1** (nouveau) : P/Invoke console mutualise (`Hide-Console`/`Show-Console`), fin de la duplication Bootstrap/App.
+- Libelles : ImportExcel n'est plus presente comme "optionnel" ; le message d'installation automatique annonce le telechargement et sa duree.
+
+### Documentation
+- **README** : structure du projet reelle (Bootstrap, Lang/, Version.ps1, Updater...), pretendu parallelisme des snapshots retire, Excel indique facultatif (fallback ImportExcel), sections langues / mise a jour automatique / SHA256 ajoutees, `config.json` documente en entier.
+
+---
+
 ## v4.9.8
 > Audit securite et robustesse — mises a jour verifiees, erreurs visibles, refactor
 
