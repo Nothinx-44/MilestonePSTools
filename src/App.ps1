@@ -87,7 +87,15 @@ Initialize-RequiredModules -InstallMode $installMode -DependenciesPath $Dependen
 
 Write-Host 'Connecting to Milestone server...' -ForegroundColor Cyan
 try {
-    Connect-ManagementServer -ShowDialog -AcceptEula -Force
+    $connectParams = @{ ShowDialog = $true; AcceptEula = $true; Force = $true }
+    # Auto-login du dialogue Milestone DESACTIVE par defaut : si un ancien serveur
+    # (inaccessible) a ete memorise avec "Auto login", le dialogue se connecte tout
+    # seul et l'application plante au demarrage sans laisser changer de serveur.
+    # Reactivable en ajoutant "autoLogin": true dans config.json.
+    if ($configRaw.autoLogin -ne $true) {
+        $connectParams.DisableAutoLogin = $true
+    }
+    Connect-ManagementServer @connectParams
     Write-Host 'Connected.' -ForegroundColor Green
 }
 catch {

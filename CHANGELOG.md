@@ -1,5 +1,13 @@
 # Release Notes
 
+## v4.9.10
+> Connexion : auto-login du dialogue Milestone desactive par defaut
+
+### Corrections
+- **App.ps1** : le dialogue de connexion Milestone est desormais ouvert avec `-DisableAutoLogin`. Si un ancien serveur (inaccessible) avait ete memorise avec "Auto login", le dialogue se connectait tout seul et l'application plantait au demarrage sans laisser changer de serveur. Le dialogue s'affiche maintenant normalement (adresse pre-remplie) et attend la validation. Reactivable via `"autoLogin": true` dans `config.json`.
+
+---
+
 ## v4.9.9
 > Quatrieme audit — bugs PTZ et stats video, demarrage plus rapide, README a jour
 

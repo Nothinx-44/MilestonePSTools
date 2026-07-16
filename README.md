@@ -116,6 +116,7 @@ Modifier `config.json` :
     "csvDelimiter": ";",
     "csvEncoding": "UTF8",
     "language": "fr",
+    "autoLogin": false,
     "autoUpdate": {
         "enabled": true,
         "repo": "Nothinx-44/XProtect-Export-Tool-to-Excel-MilestonePSTools-GUI-"
@@ -130,6 +131,7 @@ Modifier `config.json` :
 | `csvDelimiter` | Separateur des fichiers CSV | `;` |
 | `csvEncoding` | Encodage des fichiers CSV | `UTF8` |
 | `language` | Langue de l'interface (`fr` ou `en`), memorisee au premier lancement | — |
+| `autoLogin` | Connexion automatique du dialogue Milestone au dernier serveur memorise. Desactivee par defaut : un ancien serveur inaccessible ferait planter le demarrage | `false` |
 | `autoUpdate.enabled` | Verification de mise a jour au demarrage | `true` |
 | `autoUpdate.repo` | Informatif : le depot de mise a jour est fige dans le code par securite | — |
 
