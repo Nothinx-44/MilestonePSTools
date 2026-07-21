@@ -305,7 +305,10 @@ function Export-HardwareReport {
         $recStream  = if ($si) { $si.Rec  } else { $null }
         $liveStream = if ($si) { $si.Live } else { $null }
         $extraCount = if ($si) { $si.Extra } else { 0 }
-        $sameStream = $recStream -and $liveStream -and ($recStream.Name -eq $liveStream.Name)
+        # Meme flux physique pour enregistrement et live => on n'affiche pas deux fois
+        # les memes valeurs (les colonnes live restent vides).
+        $sameStream = $recStream -and $liveStream -and
+                      ($recStream.StreamReferenceId -eq $liveStream.StreamReferenceId)
         $ret        = if ($RetentionLookup.ContainsKey($cam.Name)) { $RetentionLookup[$cam.Name] } else { 'N/A' }
         @{
             'Nom'             = $cam.Name
@@ -404,15 +407,46 @@ function Export-HardwareReport {
         & $Log $script:T.EH_LogStreams
         try {
             $allStreams = @($vmsCameras | Get-VmsCameraStream -Enabled -ErrorAction Stop)
+
+            # Regroupe d'abord TOUS les flux par camera, puis identifie enregistre/live
+            # de maniere INDEPENDANTE via les drapeaux de configuration reels — un meme
+            # flux peut etre a la fois enregistre ET live par defaut (cas le plus courant).
+            # L'ancien if/elseif classait un tel flux uniquement en "enregistre" et
+            # laissait le live vide.
+            $streamsByCam = @{}
             foreach ($s in $allStreams) {
                 $name = $s.Camera.Name
-                if (-not $streamLookup.ContainsKey($name)) {
-                    $streamLookup[$name] = @{ Rec = $null; Live = $null; Extra = 0 }
+                if (-not $streamsByCam.ContainsKey($name)) {
+                    $streamsByCam[$name] = [System.Collections.Generic.List[object]]::new()
                 }
-                if ($s.Recorded -and -not $streamLookup[$name].Rec)        { $streamLookup[$name].Rec = $s }
-                elseif ($s.LiveDefault -and -not $streamLookup[$name].Live) { $streamLookup[$name].Live = $s }
-                else                                                          { $streamLookup[$name].Extra++ }
+                $streamsByCam[$name].Add($s)
             }
+
+            foreach ($name in $streamsByCam.Keys) {
+                $streams = $streamsByCam[$name]
+
+                # Flux enregistre : on ne considere QUE les flux dont le booleen Recorded
+                # est vrai (signal sans ambiguite). En multi-track, on prefere la piste
+                # primaire ; le nom de piste est expose selon les versions sur
+                # RecordingTrackName ou RecordingTrack, on teste les deux.
+                $recorded = @($streams | Where-Object { $_.Recorded })
+                $rec = $recorded | Where-Object {
+                    $_.RecordingTrackName -eq 'Primary' -or $_.RecordingTrack -eq 'Primary'
+                } | Select-Object -First 1
+                if (-not $rec) { $rec = $recorded | Select-Object -First 1 }
+
+                # Flux live : celui marque "LiveDefault" (peut etre le meme objet que $rec)
+                $live = $streams | Where-Object { $_.LiveDefault } | Select-Object -First 1
+
+                # Flux supplementaires : tous ceux qui ne sont ni l'enregistre ni le live retenus
+                $keepIds = @()
+                if ($rec)  { $keepIds += $rec.StreamReferenceId }
+                if ($live) { $keepIds += $live.StreamReferenceId }
+                $extra = @($streams | Where-Object { $_.StreamReferenceId -notin $keepIds }).Count
+
+                $streamLookup[$name] = @{ Rec = $rec; Live = $live; Extra = $extra }
+            }
+
             & $Log ($script:T.EH_LogStreamsOk -f $allStreams.Count, $streamLookup.Count)
         }
         catch { & $Log ($script:T.EH_LogStreamsErr -f $_) }

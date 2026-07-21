@@ -1,5 +1,26 @@
 # Release Notes
 
+## v4.9.11
+> Nouveau : creation d'alarmes en masse. + Export Hardware : detection fiable du flux enregistre vs live.
+
+### Nouveautes
+- **Creation d'alarmes en masse** (nouveau bouton dans Gestion). Une fenetre permet de :
+  - creer une **nouvelle alarme** en choisissant le type d'evenement, la priorite et la categorie — les listes sont **peuplees dynamiquement depuis le serveur** (pas de valeurs codees en dur, chaque installation voit ses propres options) ;
+  - ou **dupliquer une alarme existante** (reprend type / priorite / categorie) ;
+  - avec une **portee** au choix : toutes les cameras, une selection, en **une seule alarme globale** ou **une alarme par camera** (nom via un modele `{camera}`).
+  - Groupes d'evenement lus via `EventTypeGroupValues` (GUID attendus par le serveur) et types d'evenement via la hierarchie de configuration — contourne `ValidateItem` (non supporte sur certains SDK).
+  - **Test prealable** : avant toute creation en masse, une alarme jetable valide le type d'evenement choisi. Si le serveur le refuse (evenement non declencheur d'alarme), l'utilisateur est prevenu clairement AVANT de creer des alarmes en echec.
+  - Progression et annulation gerees ; les alarmes sont creees via `New-VmsAlarmDefinition` (reversibles dans le Management Client ou via `Remove-VmsAlarmDefinition`).
+
+### Corrections
+- **Export-HardwareReport.ps1** : l'identification des flux enregistrement / live etait faussee par un `if/elseif` qui ne classait chaque flux que dans UNE seule categorie. Un flux a la fois enregistre ET live par defaut (cas le plus courant) etait compte uniquement comme "enregistre", laissant les colonnes live vides ou decalees ; en multi-track, le 2e flux enregistre etait compte comme "supplementaire".
+- Nouvelle logique : les flux sont d'abord regroupes **par camera**, puis l'enregistre et le live sont identifies **independamment** via les vrais drapeaux de configuration (`Recorded`, `LiveDefault`), avec preference pour la piste d'enregistrement primaire en multi-track. Un meme flux peut legitimement etre a la fois enregistre et live.
+- La comparaison "meme flux physique" se base desormais sur `StreamReferenceId` (au lieu du nom).
+
+Resultat : les colonnes Codec / Resolution / FPS (enregistrement et live) refletent la configuration reelle de chaque camera, y compris mono-flux, bi-flux et multi-track.
+
+---
+
 ## v4.9.10
 > Connexion : auto-login du dialogue Milestone desactive par defaut
 

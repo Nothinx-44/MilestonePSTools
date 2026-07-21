@@ -397,6 +397,14 @@
                             </StackPanel>
                         </Button>
 
+                        <Button x:Name="BtnAlarms"
+                                Style="{StaticResource ActionButton}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x25B8;" Foreground="#A6E3A1" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Creer des alarmes"/>
+                            </StackPanel>
+                        </Button>
+
                         <!-- Categorie : Monitoring -->
                         <TextBlock x:Name="LblMonitoring" Text="MONITORING"
                                    FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
